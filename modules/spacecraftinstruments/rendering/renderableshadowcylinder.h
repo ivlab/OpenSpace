@@ -32,7 +32,6 @@
 #include <openspace/properties/scalar/intproperty.h>
 #include <openspace/properties/scalar/floatproperty.h>
 #include <openspace/properties/vector/vec4property.h>
-
 #include <ghoul/opengl/ghoul_gl.h>
 #include <ghoul/opengl/uniformcache.h>
 
@@ -59,12 +58,6 @@ public:
     static documentation::Documentation Documentation();
 
 private:
-    struct CylinderVBOLayout {
-        float x;
-        float y;
-        float z;
-        float e;
-    };
 
     void createCylinder(double time);
 
@@ -85,8 +78,7 @@ private:
 
     GLuint _vao = 0;
     GLuint _vbo = 0;
-
-    std::vector<CylinderVBOLayout> _vertices;
+    int _nVertices = -1;
 };
 
 } // namespace openspace

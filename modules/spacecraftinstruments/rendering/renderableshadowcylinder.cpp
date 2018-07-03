@@ -28,7 +28,6 @@
 #include <openspace/documentation/verifier.h>
 #include <openspace/engine/openspaceengine.h>
 #include <openspace/rendering/renderengine.h>
-#include <openspace/util/powerscaledcoordinate.h>
 #include <openspace/util/spicemanager.h>
 #include <openspace/util/updatestructures.h>
 #include <ghoul/filesystem/filesystem.h>
@@ -198,7 +197,7 @@ documentation::Documentation RenderableShadowCylinder::Documentation() {
 RenderableShadowCylinder::RenderableShadowCylinder(const ghoul::Dictionary& dictionary)
     : Renderable(dictionary)
     , _numberOfPoints(NumberPointsInfo, 190, 1, 300)
-    , _shadowLength(ShadowLengthInfo, 0.1f, 0.f, 0.5f)
+    , _shadowLength(ShadowLengthInfo, 0.0002f, 0.f, 0.005f)
     , _shadowColor(
         ShadowColorInfo,
         glm::vec4(1.f, 1.f, 1.f, 0.25f),
@@ -338,7 +337,7 @@ void RenderableShadowCylinder::render(const RenderData& data, RendererTasks&) {
     _shader->setUniform(_uniformCache.shadowColor, _shadowColor);
 
     glBindVertexArray(_vao);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, static_cast<GLsizei>(_vertices.size()));
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, _nVertices);
     glBindVertexArray(0);
 
     _shader->deactivate();
@@ -380,17 +379,7 @@ void RenderableShadowCylinder::createCylinder(double time) {
         _numberOfPoints
     );
 
-    std::vector<PowerScaledCoordinate> terminatorPoints;
-    std::transform(
-        res.terminatorPoints.begin(),
-        res.terminatorPoints.end(),
-        std::back_inserter(terminatorPoints),
-        [](const glm::dvec3& p) {
-        PowerScaledCoordinate coord = PowerScaledCoordinate::CreatePowerScaledCoordinate(p.x, p.y, p.z);
-            coord[3] += 3;
-            return coord;
-        }
-    );
+    std::vector<glm::dvec3> terminatorPoints = res.terminatorPoints;
 
     double lt;
     glm::dvec3 vecLightSource = SpiceManager::ref().targetPosition(
@@ -405,41 +394,45 @@ void RenderableShadowCylinder::createCylinder(double time) {
         lt
     );
 
-    vecLightSource = glm::inverse(_stateMatrix) * vecLightSource;
+    glm::dvec3 endPoint = glm::inverse(_stateMatrix) * vecLightSource *
+                          static_cast<double>(_shadowLength);
 
-    vecLightSource *= _shadowLength;
-    _vertices.clear();
+    struct Vertex {
+        float position[3];
+    };
+    std::vector<Vertex> vertices;
+    vertices.reserve(terminatorPoints.size() * 2 + 2);
 
-    const PowerScaledCoordinate endpoint = PowerScaledCoordinate::CreatePowerScaledCoordinate(
-        vecLightSource.x,
-        vecLightSource.y,
-        vecLightSource.z
-    );
-    for (const PowerScaledCoordinate& v : terminatorPoints) {
-        _vertices.push_back({ v[0], v[1], v[2], v[3] });
-        glm::vec4 f = psc_addition(v.vec4(), endpoint.vec4());
-        _vertices.push_back({ f[0], f[1], f[2], f[3] });
+    for (const glm::dvec3& v : terminatorPoints) {
+        // km -> m
+        vertices.push_back({
+            static_cast<float>(v[0] * 1000.f),
+            static_cast<float>(v[1] * 1000.f),
+            static_cast<float>(v[2] * 1000.f)
+        });
+        glm::dvec3 f = v + endPoint * 1000.0;
+        vertices.push_back({
+            static_cast<float>(f[0]),
+            static_cast<float>(f[1]),
+            static_cast<float>(f[2])
+        });
     }
-    _vertices.push_back(_vertices[0]);
-    _vertices.push_back(_vertices[1]);
+    vertices.push_back(vertices[0]);
+    vertices.push_back(vertices[1]);
+    _nVertices = static_cast<int>(vertices.size());
 
     glBindVertexArray(_vao);
     glBindBuffer(GL_ARRAY_BUFFER, _vbo);
     glBufferData(
         GL_ARRAY_BUFFER,
-        _vertices.size() * sizeof(CylinderVBOLayout),
-        nullptr,
-        GL_DYNAMIC_DRAW
-    );
-    glBufferSubData(
-        GL_ARRAY_BUFFER,
-        0,
-        _vertices.size() * sizeof(CylinderVBOLayout),
-        &_vertices[0]
+        vertices.size() * sizeof(Vertex),
+        vertices.data(),
+        GL_STATIC_DRAW
     );
 
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+
     glBindVertexArray(0);
 }
 

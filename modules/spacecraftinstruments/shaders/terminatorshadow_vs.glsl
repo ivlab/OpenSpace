@@ -24,30 +24,25 @@
 
 #version __CONTEXT__
 
-#include "PowerScaling/powerScaling_vs.hglsl"
+layout(location = 0) in vec3 in_position;
 
-layout(location = 0) in vec4 in_point_position;
-
-out vec4 vs_color;
-out vec4 vs_positionScreenSpace;
+out float vs_screenSpaceDepth;
+out flat int vs_isEndPoint;
 
 uniform mat4 modelViewProjectionTransform;
 uniform vec4 objectVelocity;
 
 uniform uint nVertices;
-uniform vec4 shadowColor;
 
 
 void main() {
-    if (mod(gl_VertexID,2) == 0.0) {
-        vs_color = shadowColor;
+    if (mod(gl_VertexID, 2) == 0.0) {
+        vs_isEndPoint = 0;
     } else {
-        vs_color = vec4(0.0);
+        vs_isEndPoint = 1;
     }
-    
-    // Transform the damn psc to homogenous coordinate
-    vec4 position = vec4(in_point_position.xyz * pow(10, in_point_position.w), 1.0);
-    vec4 positionClipSpace = modelViewProjectionTransform * position;
-    vs_positionScreenSpace = z_normalization(positionClipSpace);
-    gl_Position = vs_positionScreenSpace;
+
+    vec4 positionScreenSpace = modelViewProjectionTransform * vec4(in_position, 1.0);
+    vs_screenSpaceDepth = positionScreenSpace.w;
+    gl_Position = positionScreenSpace;
 }

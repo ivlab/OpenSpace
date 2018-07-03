@@ -22,20 +22,21 @@
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                                         *
  ****************************************************************************************/
 
-#include "PowerScaling/powerScaling_fs.hglsl"
 #include "fragment.glsl"
 
-in vec4 vs_positionScreenSpace;
-in vec4 vs_point_velocity;
-in vec4 vs_color;
+in float vs_screenSpaceDepth;
+in flat int vs_isEndPoint;
 
-uniform vec3 color;
-
+uniform vec4 shadowColor;
 
 Fragment getFragment() {
     Fragment frag;
-    frag.color = vs_color;
-    frag.depth = vs_positionScreenSpace.w;
-
+    if (vs_isEndPoint == 1) {
+        frag.color = vec4(0.0);
+    }
+    else {
+        frag.color = shadowColor;
+    }
+    frag.depth = vs_screenSpaceDepth;
     return frag;
 }

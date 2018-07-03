@@ -520,18 +520,13 @@ void RenderablePlanetProjection::attitudeParameters(double time) {
         time,
         lightTime
     );
-    PowerScaledCoordinate position = PowerScaledCoordinate::CreatePowerScaledCoordinate(p.x, p.y, p.z);
+    p *= 1000.0;
 
-    //change to KM and add psc camera scaling.
-    position[3] += (3 + _camScaling[1]);
-    //position[3] += 3;
-    glm::vec3 cpos = position.vec3();
-
-    float distance = glm::length(cpos);
+    float distance = static_cast<float>(glm::length(p));
     float radius = boundingSphere();
 
     _projectorMatrix = _projectionComponent.computeProjectorMatrix(
-        cpos,
+        glm::vec3(p),
         bs,
         _up,
         _instrumentMatrix,
@@ -578,11 +573,10 @@ void RenderablePlanetProjection::render(const RenderData& data, RendererTasks&) 
         _time,
         lt
     );
-    PowerScaledCoordinate sun_pos = PowerScaledCoordinate::CreatePowerScaledCoordinate(p.x, p.y, p.z);
 
     // Main renderpass
     _programObject->activate();
-    _programObject->setUniform(_mainUniformCache.sunPos, sun_pos.vec3());
+    _programObject->setUniform(_mainUniformCache.sunPos, glm::vec3(p));
     //_programObject->setUniform("ViewProjection" ,  data.camera.viewProjectionMatrix());
     //_programObject->setUniform("ModelTransform" , _transform);
 

@@ -30,7 +30,6 @@
 #include <memory>
 #include <openspace/rendering/renderable.h>
 #include <openspace/rendering/transferfunction.h>
-#include <openspace/util/powerscaledcoordinate.h>
 #include <ghoul/misc/dictionary.h>
 #include <openspace/properties/stringproperty.h>
 #include <openspace/properties/scalar/boolproperty.h>
@@ -144,7 +143,6 @@ private:
     LocalErrorHistogramManager* _localErrorHistogramManager;
 
     float _w;
-    PowerScaledCoordinate _pscOffset;
 
     properties::IntProperty _scalingExponent;
     properties::Vec3Property _translation;

@@ -756,27 +756,9 @@ void RenderableStars::createDataSlice(ColorOption option) {
     }
 
     for (size_t i = 0; i < _fullData.size(); i += _nValuesPerStar) {
-        glm::vec3 p = glm::vec3(_fullData[i + 0], _fullData[i + 1], _fullData[i + 2]);
-
-        // This is only temporary until the scalegraph is in place. It places all stars
-        // on a sphere with a small variation in the distance to account for blending
-        // issues ---abock
-        //if (p != glm::vec3(0.f))
-        //    p = glm::normalize(p);
-
-        //float distLy = _fullData[i + 6];
-        //float normalizedDist = (distLy - minDistance) / (maxDistance - minDistance);
-        //float distance = 18.f - normalizedDist / 1.f ;
-
-
-        //psc position = psc(glm::vec4(p, distance));
-
-        // Convert parsecs -> meter
-        PowerScaledCoordinate position = PowerScaledCoordinate(glm::vec4(p * 0.308567756f, 17));
-
-        //position[1] *= parsecsToMetersFactor[0];
-        //position[2] *= parsecsToMetersFactor[0];
-        //position[3] += parsecsToMetersFactor[1];
+        glm::dvec3 p = glm::dvec3(_fullData[i + 0], _fullData[i + 1], _fullData[i + 2]);
+        // parsec -> m
+        p *= 0.308567756 * pow(10, 17);
 
         switch (option) {
             case ColorOption::Color:
@@ -786,9 +768,12 @@ void RenderableStars::createDataSlice(ColorOption option) {
                     std::array<float, sizeof(ColorVBOLayout)> data;
                 } layout;
 
-                layout.value.position = { {
-                        position[0], position[1], position[2], position[3]
-                    } };
+                layout.value.position = {
+                    static_cast<float>(p[0]),
+                    static_cast<float>(p[1]),
+                    static_cast<float>(p[2]),
+                    0.f
+                };
 
 #ifdef USING_STELLAR_TEST_GRID
                 layout.value.bvColor = _fullData[i + 3];
@@ -813,9 +798,12 @@ void RenderableStars::createDataSlice(ColorOption option) {
                     std::array<float, sizeof(VelocityVBOLayout)> data;
                 } layout;
 
-                layout.value.position = { {
-                        position[0], position[1], position[2], position[3]
-                    } };
+                layout.value.position = {
+                    static_cast<float>(p[0]),
+                    static_cast<float>(p[1]),
+                    static_cast<float>(p[2]),
+                    0.f
+                };
 
                 layout.value.bvColor = _fullData[i + 3];
                 layout.value.luminance = _fullData[i + 4];
@@ -837,9 +825,12 @@ void RenderableStars::createDataSlice(ColorOption option) {
                     std::array<float, sizeof(SpeedVBOLayout)> data;
                 } layout;
 
-                layout.value.position = { {
-                        position[0], position[1], position[2], position[3]
-                    } };
+                layout.value.position = {
+                    static_cast<float>(p[0]),
+                    static_cast<float>(p[1]),
+                    static_cast<float>(p[2]),
+                    0.f
+                };
 
                 layout.value.bvColor = _fullData[i + 3];
                 layout.value.luminance = _fullData[i + 4];

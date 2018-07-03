@@ -265,7 +265,6 @@ RenderableMultiresVolume::RenderableMultiresVolume (const ghoul::Dictionary& dic
     _transferFunctionPath = absPath(_transferFunctionPath);
     _transferFunction = std::make_shared<TransferFunction>(_transferFunctionPath);
 
-    //_pscOffset = psc(glm::vec4(0.0));
     //_boxScaling = glm::vec3(1.0);
 
 

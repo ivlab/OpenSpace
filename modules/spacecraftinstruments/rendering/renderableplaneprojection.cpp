@@ -227,7 +227,7 @@ void RenderablePlaneProjection::updatePlane(const Image& img, double currentTime
     // The apparent position, CN+S, makes image align best with target
 
     // @TODO:  Remove these powerscaled coordinates
-    PowerScaledCoordinate projection[4];
+    glm::dvec3 projection[4];
     for (size_t j = 0; j < bounds.size(); ++j) {
         bounds[j] = SpiceManager::ref().frameTransformationMatrix(
             frame,
@@ -239,18 +239,11 @@ void RenderablePlaneProjection::updatePlane(const Image& img, double currentTime
         if (!_moving) {
             cornerPosition -= vecToTarget;
         }
-        cornerPosition = SpiceManager::ref().frameTransformationMatrix(
+        projection[j] = SpiceManager::ref().frameTransformationMatrix(
             GalacticFrame,
             _target.frame,
             currentTime
-        ) * cornerPosition;
-
-        projection[j] = PowerScaledCoordinate::CreatePowerScaledCoordinate(
-            cornerPosition[0],
-            cornerPosition[1],
-            cornerPosition[2]
-        );
-        projection[j][3] += 3;
+        ) * cornerPosition * 1000.0;
     }
 
     if (!_moving) {
@@ -267,17 +260,17 @@ void RenderablePlaneProjection::updatePlane(const Image& img, double currentTime
         // square of two triangles drawn within fov in target coordinates
         //      x      y     z     w     s     t
         // Lower left 1
-        projection[1][0], projection[1][1], projection[1][2], projection[1][3], 0, 0,
+        projection[1][0], projection[1][1], projection[1][2], 0.f, 0, 0,
         // Upper right 2
-        projection[3][0], projection[3][1], projection[3][2], projection[3][3], 1, 1,
+        projection[3][0], projection[3][1], projection[3][2], 0.f, 1, 1,
         // Upper left 3
-        projection[2][0], projection[2][1], projection[2][2], projection[2][3], 0, 1,
+        projection[2][0], projection[2][1], projection[2][2], 0.f, 0, 1,
         // Lower left 4 = 1
-        projection[1][0], projection[1][1], projection[1][2], projection[1][3], 0, 0,
+        projection[1][0], projection[1][1], projection[1][2], 0.f, 0, 0,
         // Lower right 5
-        projection[0][0], projection[0][1], projection[0][2], projection[0][3], 1, 0,
+        projection[0][0], projection[0][1], projection[0][2], 0.f, 1, 0,
         // Upper left 6 = 2
-        projection[3][0], projection[3][1], projection[3][2], projection[3][3], 1, 1,
+        projection[3][0], projection[3][1], projection[3][2], 0.f, 1, 1,
     };
 
     glBindVertexArray(_quad);

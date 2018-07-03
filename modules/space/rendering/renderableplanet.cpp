@@ -547,15 +547,13 @@ void RenderablePlanet::render(const RenderData& data, RendererTasks&) {
                 lt
             );
             casterPos *= 1000.0; // converting to meters
-            PowerScaledCoordinate caster_pos = PowerScaledCoordinate::CreatePowerScaledCoordinate(
-                casterPos.x,
-                casterPos.y,
-                casterPos.z
-            );
 
             // First we determine if the caster is shadowing the current planet (all
             // calculations in World Coordinates):
-            const glm::vec3 planetCasterVec = (caster_pos - data.position).vec3();
+            //const glm::vec3 planetCasterVec = 
+            const glm::vec3 planetCasterVec = glm::vec3(
+                casterPos - glm::dvec3(data.position.vec3())
+            );
             const glm::vec3 sourceCasterVec = glm::vec3(casterPos - sourcePos);
             const float sc_length = glm::length(sourceCasterVec);
             const glm::vec3 planetCaster_proj =

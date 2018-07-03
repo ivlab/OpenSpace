@@ -410,12 +410,10 @@ void RenderableModelProjection::update(const UpdateData& data) {
     }
 
     // @TODO:  Change this to remove PSC
-    glm::dvec3 p =
+    _sunPosition = glm::vec3(
         OsEng.renderEngine().scene()->sceneGraphNode("Sun")->worldPosition() -
-        data.modelTransform.translation;
-
-    _sunPosition =
-        PowerScaledCoordinate::CreatePowerScaledCoordinate(p.x, p.y, p.z).vec3();
+        data.modelTransform.translation
+    );
 }
 
 void RenderableModelProjection::imageProjectGPU(
@@ -490,6 +488,7 @@ void RenderableModelProjection::attitudeParameters(double time) {
     }
 
     double lightTime;
+    // I don't know why it is 10000 here and not 1000 to get from km -> m  (abock)
     const glm::dvec3 p = SpiceManager::ref().targetPosition(
         _projectionComponent.projectorId(),
         _projectionComponent.projecteeId(),
@@ -497,19 +496,13 @@ void RenderableModelProjection::attitudeParameters(double time) {
         _projectionComponent.aberration(),
         time,
         lightTime
-    );
+    ) * 10000.0;
 
-    // @TODO:  Remove this and replace with cpos = p * 1000 ?
-    PowerScaledCoordinate position = PowerScaledCoordinate::CreatePowerScaledCoordinate(p.x, p.y, p.z);
-
-    position[3] += 4;
-    const glm::vec3 cpos = position.vec3();
-
-    const float distance = glm::length(cpos);
+    const float distance = glm::length(p);
     const float radius = boundingSphere();
 
     _projectorMatrix = _projectionComponent.computeProjectorMatrix(
-        cpos,
+        glm::vec3(p),
         _boresight,
         _up,
         _instrumentMatrix,

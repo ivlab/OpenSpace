@@ -27,9 +27,9 @@
 
 #include <modules/iswa/rendering/datacygnet.h>
 
-namespace openspace {
+#include <openspace/util/geometry.h>
 
-class PowerScaledSphere;
+namespace openspace {
 
 /**
  * DataSphere is a concrete IswaCygnet with data files as its input source. The class
@@ -53,7 +53,7 @@ protected:
     void setUniforms() override;
     std::vector<float*> textureData() override;
 
-    std::unique_ptr<PowerScaledSphere> _sphere;
+    geometry::Buffers _sphere;
     float _radius;
 };
 

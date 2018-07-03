@@ -27,7 +27,6 @@
 #include <openspace/documentation/verifier.h>
 #include <openspace/scene/scenegraphnode.h>
 #include <openspace/rendering/renderable.h>
-#include <openspace/util/powerscaledsphere.h>
 
 namespace {
     constexpr openspace::properties::Property::PropertyInfo RadiusInfo = {
@@ -73,7 +72,6 @@ documentation::Documentation SimpleSphereGeometry::Documentation() {
 SimpleSphereGeometry::SimpleSphereGeometry(const ghoul::Dictionary& dictionary)
     : _radius(RadiusInfo, glm::vec3(1.f), glm::vec3(0.f), glm::vec3(std::pow(10.f, 20.f)))
     , _segments(SegmentsInfo, 20, 1, 5000)
-    , _sphere(nullptr)
 {
     documentation::testSpecificationAndThrow(
         Documentation(),
@@ -110,12 +108,14 @@ void SimpleSphereGeometry::initialize() {
 }
 
 void SimpleSphereGeometry::deinitialize() {
-    delete _sphere;
-    _sphere = nullptr;
+    geometry::deleteBuffers(_sphere);
 }
 
 void SimpleSphereGeometry::render() {
-    _sphere->render();
+    glBindVertexArray(_sphere.vao);
+    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers.ibo);
+    glDrawElements(GL_TRIANGLES, _sphere.nVertices, GL_UNSIGNED_INT, nullptr);
+    glBindVertexArray(0);
 }
 
 float SimpleSphereGeometry::boundingSphere() const {
@@ -126,9 +126,7 @@ float SimpleSphereGeometry::boundingSphere() const {
 void SimpleSphereGeometry::createSphere() {
     const glm::vec3 radius = _radius.value();
 
-    delete _sphere;
-    _sphere = new PowerScaledSphere(glm::vec4(radius, 0.0), _segments);
-    _sphere->initialize();
+    geometry::createSphere(_sphere, radius, _segments);
 }
 
 }  // namespace openspace::planetgeometry

@@ -26,8 +26,6 @@
 
 #include <openspace/engine/openspaceengine.h>
 #include <openspace/rendering/renderengine.h>
-#include <openspace/util/powerscaledscalar.h>
-#include <openspace/util/powerscaledsphere.h>
 #include <modules/iswa/util/dataprocessorjson.h>
 #include <modules/iswa/rendering/iswabasegroup.h>
 #include <ghoul/filesystem/filesystem.h>
@@ -55,7 +53,7 @@ void DataSphere::initializeGL() {
         );
     }
 
-    // Rotate 90 degrees because of the texture coordinates in PowerScaledSphere
+    // Rotate 90 degrees because of the texture coordinates in the sphere
     _rotation = glm::rotate(_rotation, glm::half_pi<float>(), glm::vec3(1.f, 0.f, 0.f));
 
     if (_group) {
@@ -87,22 +85,24 @@ void DataSphere::initializeGL() {
 }
 
 bool DataSphere::createGeometry() {
-    PowerScaledScalar radius =  PowerScaledScalar(6.371f * _radius, 6.0);
-    int segments = 100;
-    _sphere = std::make_unique<PowerScaledSphere>(radius, segments);
-    _sphere->initialize();
+    const int segments = 100;
+    geometry::createSphere(_sphere, 6.371f * _radius * pow(10.0, 6.0), segments);
     return true;
 }
 
 bool DataSphere::destroyGeometry() {
-    _sphere = nullptr;
+    geometry::deleteBuffers(_sphere);
     return true;
 }
 
 void DataSphere::renderGeometry() const {
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
-    _sphere->render();
+
+    glBindVertexArray(_sphere.vao);
+    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers.ibo);
+    glDrawElements(GL_TRIANGLES, _sphere.nVertices, GL_UNSIGNED_INT, nullptr);
+    glBindVertexArray(0);
 }
 
 std::vector<float*> DataSphere::textureData() {

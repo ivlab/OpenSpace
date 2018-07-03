@@ -29,8 +29,6 @@
 
 namespace openspace {
 
-class PowerScaledScalar;
-
 class PowerScaledCoordinate {
 public:
     // constructors
@@ -62,7 +60,6 @@ public:
     glm::dvec3 dvec3() const;
 
     // length of the vector as a pss
-    PowerScaledScalar length() const;
     glm::vec3 direction() const;
 
     // operator overloading
@@ -80,8 +77,6 @@ public:
     // scalar operators
     PowerScaledCoordinate operator*(const double& rhs) const;
     PowerScaledCoordinate operator*(const float& rhs) const;
-    PowerScaledCoordinate& operator*=(const PowerScaledScalar& rhs);
-    PowerScaledCoordinate operator*(const PowerScaledScalar& rhs) const;
     PowerScaledCoordinate operator*(const glm::mat4& matrix) const;
 
 

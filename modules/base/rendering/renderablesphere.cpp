@@ -29,8 +29,6 @@
 #include <openspace/documentation/verifier.h>
 #include <openspace/engine/openspaceengine.h>
 #include <openspace/rendering/renderengine.h>
-#include <openspace/util/powerscaledscalar.h>
-#include <openspace/util/powerscaledsphere.h>
 #include <openspace/util/updatestructures.h>
 #include <ghoul/glm.h>
 #include <ghoul/filesystem/filesystem.h>
@@ -231,11 +229,7 @@ bool RenderableSphere::isReady() const {
 }
 
 void RenderableSphere::initializeGL() {
-    _sphere = std::make_unique<PowerScaledSphere>(
-        PowerScaledScalar::CreatePSS(_size),
-        _segments
-    );
-    _sphere->initialize();
+     geometry::createSphere(_sphere, _size, _segments);
 
     _shader = BaseModule::ProgramObjectManager.requestProgramObject(
         ProgramName,
@@ -257,6 +251,7 @@ void RenderableSphere::initializeGL() {
 }
 
 void RenderableSphere::deinitializeGL() {
+    geometry::deleteBuffers(_sphere);
     _texture = nullptr;
 
     BaseModule::ProgramObjectManager.releaseProgramObject(
@@ -335,7 +330,10 @@ void RenderableSphere::render(const RenderData& data, RendererTasks&) {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE);
     }
 
-    _sphere->render();
+    glBindVertexArray(_sphere.vao);
+    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffers.ibo);
+    glDrawElements(GL_TRIANGLES, _sphere.nVertices, GL_UNSIGNED_INT, nullptr);
+    glBindVertexArray(0);
 
     if (usingFramebufferRenderer) {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -356,11 +354,7 @@ void RenderableSphere::update(const UpdateData&) {
     }
 
     if (_sphereIsDirty) {
-        _sphere = std::make_unique<PowerScaledSphere>(
-            PowerScaledScalar::CreatePSS(_size),
-            _segments
-        );
-        _sphere->initialize();
+        geometry::createSphere(_sphere, _size, _segments);
         _sphereIsDirty = false;
     }
 }

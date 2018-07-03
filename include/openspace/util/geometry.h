@@ -22,45 +22,27 @@
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                                         *
  ****************************************************************************************/
 
-#ifndef __OPENSPACE_CORE___POWERSCALEDSPHERE___H__
-#define __OPENSPACE_CORE___POWERSCALEDSPHERE___H__
+#ifndef __OPENSPACE_CORE___GEOMETRY___H__
+#define __OPENSPACE_CORE___GEOMETRY___H__
 
-#include <ghoul/glm.h>
 #include <ghoul/opengl/ghoul_gl.h>
+#include <ghoul/glm.h>
 
-namespace openspace {
+namespace openspace::geometry {
 
-class PowerScaledScalar;
-class PowerScaledSphere;
+struct Buffers {
+    GLuint vao = 0;
+    GLuint vbo = 0;
+    GLuint ibo = 0;
 
-class PowerScaledSphere {
-public:
-    PowerScaledSphere(const PowerScaledScalar& radius, int segments = 8);
-    PowerScaledSphere(glm::vec3 radius, int segments);
-    PowerScaledSphere(const PowerScaledSphere& cpy);
-    ~PowerScaledSphere();
-
-    bool initialize();
-
-    void render();
-
-//private:
-    struct Vertex {
-        GLfloat location[4];
-        GLfloat tex[2];
-        GLfloat normal[3];
-    };
-
-    GLuint _vaoID = 0;
-    GLuint _vBufferID = 0;
-    GLuint _iBufferID = 0;
-
-    unsigned int _isize;
-    unsigned int _vsize;
-    Vertex* _varray;
-    int* _iarray;
+    int nVertices = -1;
 };
 
-} // namespace openspace
+void deleteBuffers(Buffers& buffers);
 
-#endif // __OPENSPACE_CORE___POWERSCALEDSPHERE___H__
+void createSphere(Buffers& buffers, float radius, int nSegments = 8);
+void createSphere(Buffers& buffers, const glm::vec3& radii, int nSegments = 8);
+
+} // namespace openspace::geometry
+
+#endif // __OPENSPACE_CORE___GEOMETRY___H__

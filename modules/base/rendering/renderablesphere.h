@@ -31,6 +31,7 @@
 #include <openspace/properties/optionproperty.h>
 #include <openspace/properties/scalar/intproperty.h>
 #include <openspace/properties/scalar/floatproperty.h>
+#include <openspace/util/geometry.h>
 #include <ghoul/opengl/uniformcache.h>
 
 namespace ghoul::opengl {
@@ -40,7 +41,6 @@ namespace ghoul::opengl {
 
 namespace openspace {
 
-class PowerScaledSphere;
 struct RenderData;
 struct UpdateData;
 
@@ -77,7 +77,7 @@ private:
     ghoul::opengl::ProgramObject* _shader = nullptr;
     std::unique_ptr<ghoul::opengl::Texture> _texture;
 
-    std::unique_ptr<PowerScaledSphere> _sphere;
+    geometry::Buffers _sphere;
 
     UniformCache(opacity, viewProjection, modelTransform, texture) _uniformCache;
 

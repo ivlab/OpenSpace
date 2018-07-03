@@ -29,11 +29,9 @@
 
 #include <openspace/properties/scalar/intproperty.h>
 #include <openspace/properties/vector/vec3property.h>
+#include <openspace/util/geometry.h>
 
-namespace openspace {
-    class Renderable;
-    class PowerScaledSphere;
-} // namespace openspace
+namespace openspace { class Renderable; }
 
 namespace openspace::documentation { struct Documentation; }
 
@@ -57,7 +55,7 @@ private:
 
     properties::Vec3Property _radius;
     properties::IntProperty _segments;
-    PowerScaledSphere* _sphere;
+    geometry::Buffers _sphere;
 };
 
 } // namespace openspace::planetgeometry

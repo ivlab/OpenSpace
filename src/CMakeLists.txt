@@ -165,12 +165,11 @@ set(OPENSPACE_SOURCE
     ${OPENSPACE_BASE_DIR}/src/util/camera.cpp
     ${OPENSPACE_BASE_DIR}/src/util/distanceconversion.cpp
     ${OPENSPACE_BASE_DIR}/src/util/factorymanager.cpp
+    ${OPENSPACE_BASE_DIR}/src/util/geometry.cpp
     ${OPENSPACE_BASE_DIR}/src/util/httprequest.cpp
     ${OPENSPACE_BASE_DIR}/src/util/keys.cpp
     ${OPENSPACE_BASE_DIR}/src/util/openspacemodule.cpp
     ${OPENSPACE_BASE_DIR}/src/util/powerscaledcoordinate.cpp
-    ${OPENSPACE_BASE_DIR}/src/util/powerscaledscalar.cpp
-    ${OPENSPACE_BASE_DIR}/src/util/powerscaledsphere.cpp
     ${OPENSPACE_BASE_DIR}/src/util/progressbar.cpp
     ${OPENSPACE_BASE_DIR}/src/util/resourcesynchronization.cpp
     ${OPENSPACE_BASE_DIR}/src/util/screenlog.cpp
@@ -347,14 +346,13 @@ set(OPENSPACE_HEADER
     ${OPENSPACE_BASE_DIR}/include/openspace/util/distanceconversion.h
     ${OPENSPACE_BASE_DIR}/include/openspace/util/factorymanager.h
     ${OPENSPACE_BASE_DIR}/include/openspace/util/factorymanager.inl
+    ${OPENSPACE_BASE_DIR}/include/openspace/util/geometry.h
     ${OPENSPACE_BASE_DIR}/include/openspace/util/httprequest.h
     ${OPENSPACE_BASE_DIR}/include/openspace/util/job.h
     ${OPENSPACE_BASE_DIR}/include/openspace/util/keys.h
     ${OPENSPACE_BASE_DIR}/include/openspace/util/mouse.h
     ${OPENSPACE_BASE_DIR}/include/openspace/util/openspacemodule.h
     ${OPENSPACE_BASE_DIR}/include/openspace/util/powerscaledcoordinate.h
-    ${OPENSPACE_BASE_DIR}/include/openspace/util/powerscaledscalar.h
-    ${OPENSPACE_BASE_DIR}/include/openspace/util/powerscaledsphere.h
     ${OPENSPACE_BASE_DIR}/include/openspace/util/progressbar.h
     ${OPENSPACE_BASE_DIR}/include/openspace/util/resourcesynchronization.h
     ${OPENSPACE_BASE_DIR}/include/openspace/util/screenlog.h

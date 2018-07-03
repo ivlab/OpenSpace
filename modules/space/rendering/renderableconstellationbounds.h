@@ -56,6 +56,7 @@ public:
 
     bool isReady() const override;
 
+    void update(const UpdateData& data) override;
     void render(const RenderData& data, RendererTasks& rendererTask) override;
 
     static documentation::Documentation Documentation();
@@ -102,6 +103,9 @@ private:
     /// The file containing constellation names
     properties::StringProperty _constellationFilename;
 
+    /// Determines the size of the celestial sphere
+    properties::FloatProperty _scale;
+
     /// Determines the color of the constellation lines
     properties::Vec3Property _color;
 
@@ -109,6 +113,11 @@ private:
 
     /// The list of all loaded constellation bounds
     std::vector<ConstellationBound> _constellationBounds;
+
+    bool _vertexDirty = false;
+    bool _vertexGLDirty = false;
+    bool _constellationDirty = false;
+    bool _selectionDirty = false;
 
     struct Vertex {
         float x;

@@ -63,6 +63,13 @@ namespace {
         "full opacity."
     };
 
+    constexpr openspace::properties::Property::PropertyInfo ScaleInfo = {
+        "Scale",
+        "Scale",
+        "Determines the scale of the celestial sphere at which the constellation bounds "
+        "are placed."
+    };
+
     constexpr openspace::properties::Property::PropertyInfo SelectionInfo = {
         "ConstellationSelection",
         "Constellation Selection",
@@ -114,6 +121,7 @@ RenderableConstellationBounds::RenderableConstellationBounds(
     : Renderable(dictionary)
     , _vertexFilename(VertexInfo)
     , _constellationFilename(ConstellationInfo)
+    , _scale(ScaleInfo, 1e17f, 1.f, 1e23f)
     , _color(ColorInfo, glm::vec3(1.f, 0.f, 0.f), glm::vec3(0.f), glm::vec3(1.f))
     , _constellationSelection(SelectionInfo)
 {
@@ -123,27 +131,41 @@ RenderableConstellationBounds::RenderableConstellationBounds(
         "RenderableConstellationBounds"
     );
 
-    _vertexFilename.onChange([&](){ loadVertexFile(); });
+    _vertexFilename.onChange([&]() { _vertexDirty = true; });
     addProperty(_vertexFilename);
+
+    _constellationFilename.onChange([&]() { _constellationDirty = true; });
+    addProperty(_constellationFilename);
+
+    _scale.onChange([&]() { _vertexDirty = true; });
+    addProperty(_scale);
+
+    _color.setViewOption(properties::Property::ViewOptions::Color);
+    addProperty(_color);
+
+    _constellationSelection.onChange([this]() { _selectionDirty = true; });
+    addProperty(_constellationSelection);
+
     _vertexFilename = dictionary.value<std::string>(VertexInfo.identifier);
 
-    _constellationFilename.onChange([&](){ loadConstellationFile(); });
-    addProperty(_constellationFilename);
     if (dictionary.hasKey(ConstellationInfo.identifier)) {
         _constellationFilename = dictionary.value<std::string>(
             ConstellationInfo.identifier
         );
     }
 
-    _color.setViewOption(properties::Property::ViewOptions::Color);
-    addProperty(_color);
+    if (dictionary.hasKeyAndValue<double>(ScaleInfo.identifier)) {
+        _scale = static_cast<float>(dictionary.value<double>(ScaleInfo.identifier));
+    }
+
     if (dictionary.hasKey(ColorInfo.identifier)) {
         _color = glm::vec3(dictionary.value<glm::dvec3>(ColorInfo.identifier));
     }
 
+    // Trigger all of the dirty flags, the update method does not do anything else
+    update({});
+
     fillSelectionProperty();
-    _constellationSelection.onChange([this]() { selectionPropertyHasChanged(); });
-    addProperty(_constellationSelection);
 
     if (dictionary.hasKey(SelectionInfo.identifier)) {
         const ghoul::Dictionary& selection = dictionary.value<ghoul::Dictionary>(
@@ -199,7 +221,7 @@ void RenderableConstellationBounds::initializeGL() {
     glBufferData(
         GL_ARRAY_BUFFER,
         _vertexValues.size() * 3 * sizeof(float),
-        &_vertexValues[0],
+        _vertexValues.data(),
         GL_STATIC_DRAW
     );
 
@@ -226,19 +248,48 @@ bool RenderableConstellationBounds::isReady() const {
     return (_vao != 0) && (_vbo != 0) && _program;
 }
 
+void RenderableConstellationBounds::update(const UpdateData&) {
+    // This method is also called from the constructor to load all files during
+    // construction time
+
+    if (_vertexDirty) {
+        loadVertexFile();
+        _vertexDirty = false;
+    }
+    if (_vertexGLDirty) {
+        glBindBuffer(GL_ARRAY_BUFFER, _vbo);
+        glBufferData(
+            GL_ARRAY_BUFFER,
+            _vertexValues.size() * 3 * sizeof(float),
+            _vertexValues.data(),
+            GL_STATIC_DRAW
+        );
+
+        _vertexGLDirty = false;
+    }
+    if (_constellationDirty) {
+        loadConstellationFile();
+        _constellationDirty = false;
+    }
+    if (_selectionDirty) {
+        selectionPropertyHasChanged();
+        _selectionDirty = false;
+    }
+}
+
 void RenderableConstellationBounds::render(const RenderData& data, RendererTasks&) {
     _program->activate();
 
-    setPscUniforms(*_program, data.camera, data.position);
-
-    glm::dmat4 modelTransform =
+    const glm::dmat4 model =
         glm::translate(glm::dmat4(1.0), data.modelTransform.translation) *
         glm::dmat4(data.modelTransform.rotation) *
         glm::scale(glm::dmat4(1.0), glm::dvec3(data.modelTransform.scale));
 
+    const glm::dmat4 modelView = data.camera.combinedViewMatrix() * model;
 
-    _program->setUniform("ViewProjection", data.camera.viewProjectionMatrix());
-    _program->setUniform("ModelTransform", glm::mat4(modelTransform));
+    _program->setUniform("ModelViewTransform", glm::mat4(modelView));
+    _program->setUniform("ProjectionTransform", data.camera.projectionMatrix());
+
     _program->setUniform("color", _color);
 
     glBindVertexArray(_vao);
@@ -255,6 +306,7 @@ bool RenderableConstellationBounds::loadVertexFile() {
     if (_vertexFilename.value().empty()) {
         return false;
     }
+    _vertexValues.clear();
 
     std::string fileName = absPath(_vertexFilename);
     std::ifstream file;
@@ -332,9 +384,9 @@ bool RenderableConstellationBounds::loadVertexFile() {
 
         // Add the new vertex to our list of vertices
         _vertexValues.push_back({
-            static_cast<float>(rectangularValues[0]),
-            static_cast<float>(rectangularValues[1]),
-            static_cast<float>(rectangularValues[2])
+            static_cast<float>(rectangularValues[0] * _scale),
+            static_cast<float>(rectangularValues[1] * _scale),
+            static_cast<float>(rectangularValues[2] * _scale)
         });
         ++currentLineNumber;
     }
@@ -348,6 +400,8 @@ bool RenderableConstellationBounds::loadVertexFile() {
         _vertexValues.size() - currentBound.startIndex
     );
     _constellationBounds.push_back(currentBound);
+
+    _vertexGLDirty = true;
 
     return true;
 }

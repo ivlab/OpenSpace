@@ -22,21 +22,12 @@
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                                         *
  ****************************************************************************************/
 
-#version __CONTEXT__
+#ifndef __ZNORMALIZATION_HGLSL__
+#define __ZNORMALIZATION_HGLSL__
 
-#include "znormalization.hglsl"
-
-layout(location = 0) in vec3 in_position;
-
-out vec4 vs_positionViewSpace;
-out float vs_screenSpaceDepth;
-
-uniform mat4 ModelViewTransform;
-uniform mat4 ProjectionTransform;
-
-void main() {
-    vs_positionViewSpace = ModelViewTransform * vec4(in_position, 1.0);
-    vec4 positionScreenSpace = ProjectionTransform * vs_positionViewSpace;
-    gl_Position = z_normalization(positionScreenSpace);
-    vs_screenSpaceDepth = positionScreenSpace.w;
+vec4 z_normalization(vec4 v_in) {
+    v_in.z = 0;
+    return v_in;
 }
+
+#endif // __ZNORMALIZATION_HGLSL__

@@ -157,7 +157,7 @@ void IswaCygnet::render(const RenderData& data, RendererTasks&) {
     }
     transform = transform * _rotation;
 
-    psc position = data.position + transform * glm::vec4(
+    PowerScaledCoordinate position = data.position + transform * glm::vec4(
         _data.spatialScale.x * _data.offset,
         _data.spatialScale.w
     );

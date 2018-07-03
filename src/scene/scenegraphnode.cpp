@@ -336,7 +336,7 @@ void SceneGraphNode::render(const RenderData& data, RendererTasks& tasks) {
     if (_state != State::GLInitialized) {
         return;
     }
-    const psc thisPositionPSC = psc::CreatePowerScaledCoordinate(
+    const PowerScaledCoordinate thisPositionPSC = PowerScaledCoordinate::CreatePowerScaledCoordinate(
         _worldPositionCached.x,
         _worldPositionCached.y,
         _worldPositionCached.z
@@ -683,15 +683,15 @@ const SceneGraphNode::PerformanceRecord& SceneGraphNode::performanceRecord() con
 }
 
 void SceneGraphNode::updateCamera(Camera* camera) const {
-    psc origin(worldPosition());
+    PowerScaledCoordinate origin(worldPosition());
     //int i = 0;
     // the camera position
 
-    psc relative = camera->position();
-    psc focus = camera->focusPosition();
-    psc relative_focus = relative - focus;
+    PowerScaledCoordinate relative = camera->position();
+    PowerScaledCoordinate focus = camera->focusPosition();
+    PowerScaledCoordinate relative_focus = relative - focus;
 
-    psc target = origin + relative_focus;
+    PowerScaledCoordinate target = origin + relative_focus;
 
     camera->setPosition(target);
     camera->setFocusPosition(origin);

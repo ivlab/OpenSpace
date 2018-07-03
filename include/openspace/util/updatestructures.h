@@ -52,7 +52,7 @@ struct RenderData {
     const Camera& camera;
     // psc position to be removed in favor of the double precision position defined in
     // the translation in transform.
-    psc position;
+    PowerScaledCoordinate position;
     const Time time;
     bool doPerformanceMeasurement;
     int renderBinMask;

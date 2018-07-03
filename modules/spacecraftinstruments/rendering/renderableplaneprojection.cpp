@@ -227,7 +227,7 @@ void RenderablePlaneProjection::updatePlane(const Image& img, double currentTime
     // The apparent position, CN+S, makes image align best with target
 
     // @TODO:  Remove these powerscaled coordinates
-    psc projection[4];
+    PowerScaledCoordinate projection[4];
     for (size_t j = 0; j < bounds.size(); ++j) {
         bounds[j] = SpiceManager::ref().frameTransformationMatrix(
             frame,

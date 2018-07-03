@@ -104,8 +104,6 @@ private:
     glm::vec4 _vec = glm::vec4(0.f);
 };
 
-typedef PowerScaledCoordinate psc;
-
 } // namespace openspace
 
 #endif // __OPENSPACE_CORE___POWERSCALEDCOORDINATE___H__

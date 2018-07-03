@@ -547,7 +547,7 @@ void RenderablePlanet::render(const RenderData& data, RendererTasks&) {
                 lt
             );
             casterPos *= 1000.0; // converting to meters
-            psc caster_pos = PowerScaledCoordinate::CreatePowerScaledCoordinate(
+            PowerScaledCoordinate caster_pos = PowerScaledCoordinate::CreatePowerScaledCoordinate(
                 casterPos.x,
                 casterPos.y,
                 casterPos.z

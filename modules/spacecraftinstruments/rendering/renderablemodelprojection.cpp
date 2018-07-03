@@ -500,7 +500,7 @@ void RenderableModelProjection::attitudeParameters(double time) {
     );
 
     // @TODO:  Remove this and replace with cpos = p * 1000 ?
-    psc position = PowerScaledCoordinate::CreatePowerScaledCoordinate(p.x, p.y, p.z);
+    PowerScaledCoordinate position = PowerScaledCoordinate::CreatePowerScaledCoordinate(p.x, p.y, p.z);
 
     position[3] += 4;
     const glm::vec3 cpos = position.vec3();

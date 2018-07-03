@@ -61,7 +61,6 @@
 
 #include <modules/atmosphere/rendering/renderableatmosphere.h>
 #include <openspace/engine/openspaceengine.h>
-#include <openspace/util/powerscaledcoordinate.h>
 #include <openspace/util/updatestructures.h>
 #include <openspace/util/spicemanager.h>
 #include <openspace/rendering/renderable.h>

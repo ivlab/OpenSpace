@@ -271,26 +271,26 @@ const glm::mat4& Camera::SgctInternal::viewProjectionMatrix() const {
 }
 
 // Deprecated
-void Camera::setPosition(psc pos) {
+void Camera::setPosition(PowerScaledCoordinate pos) {
     std::lock_guard<std::mutex> _lock(_mutex);
     _position = pos.dvec3();
 }
 
-void Camera::setFocusPosition(psc pos) {
+void Camera::setFocusPosition(PowerScaledCoordinate pos) {
     std::lock_guard<std::mutex> _lock(_mutex);
     _focusPosition = pos.dvec3();
 }
 
-psc Camera::position() const {
-    return psc(static_cast<glm::dvec3>(_position));
+PowerScaledCoordinate Camera::position() const {
+    return PowerScaledCoordinate(static_cast<glm::dvec3>(_position));
 }
 
-psc Camera::unsynchedPosition() const {
-    return psc(static_cast<glm::dvec3>(_position));
+PowerScaledCoordinate Camera::unsynchedPosition() const {
+    return PowerScaledCoordinate(static_cast<glm::dvec3>(_position));
 }
 
-psc Camera::focusPosition() const {
-    return psc(_focusPosition);
+PowerScaledCoordinate Camera::focusPosition() const {
+    return PowerScaledCoordinate(_focusPosition);
 }
 
 const glm::mat4& Camera::viewMatrix() const {

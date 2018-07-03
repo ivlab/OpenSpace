@@ -140,15 +140,15 @@ public:
 
     // Deprecated
     // [[deprecated("Replaced by Camera::setPositionVec3()")]]
-    void setPosition(psc pos);
+    void setPosition(PowerScaledCoordinate pos);
     // [[deprecated("Replaced by Camera::setFocusPositionVec3()")]]
-    void setFocusPosition(psc pos);
+    void setFocusPosition(PowerScaledCoordinate pos);
     // [[deprecated("Replaced by Camera::positionVec3()")]]
-    psc position() const;
+    PowerScaledCoordinate position() const;
     // [[deprecated("Replaced by Camera::unsynchedPositionVec3()")]]
-    psc unsynchedPosition() const;
+    PowerScaledCoordinate unsynchedPosition() const;
     // [[deprecated("Replaced by Camera::focusPositionVec3()")]]
-    psc focusPosition() const;
+    PowerScaledCoordinate focusPosition() const;
     const glm::mat4& sceneMatrix() const;
     // @TODO use Camera::SgctInternal interface instead
     // [[deprecated("Replaced by Camera::SgctInternal::viewMatrix()")]]

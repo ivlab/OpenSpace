@@ -520,7 +520,7 @@ void RenderablePlanetProjection::attitudeParameters(double time) {
         time,
         lightTime
     );
-    psc position = PowerScaledCoordinate::CreatePowerScaledCoordinate(p.x, p.y, p.z);
+    PowerScaledCoordinate position = PowerScaledCoordinate::CreatePowerScaledCoordinate(p.x, p.y, p.z);
 
     //change to KM and add psc camera scaling.
     position[3] += (3 + _camScaling[1]);
@@ -578,7 +578,7 @@ void RenderablePlanetProjection::render(const RenderData& data, RendererTasks&) 
         _time,
         lt
     );
-    psc sun_pos = PowerScaledCoordinate::CreatePowerScaledCoordinate(p.x, p.y, p.z);
+    PowerScaledCoordinate sun_pos = PowerScaledCoordinate::CreatePowerScaledCoordinate(p.x, p.y, p.z);
 
     // Main renderpass
     _programObject->activate();

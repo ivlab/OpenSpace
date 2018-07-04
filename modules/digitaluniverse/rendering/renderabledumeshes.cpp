@@ -574,8 +574,8 @@ void RenderableDUMeshes::renderLabels(const RenderData& data,
 
 void RenderableDUMeshes::render(const RenderData& data, RendererTasks&) {
     const glm::dmat4 modelMatrix =
-        glm::translate(glm::dmat4(1.0), data.modelTransform.translation) * // Translation
-        glm::dmat4(data.modelTransform.rotation) *  // Spice rotation
+        glm::translate(glm::dmat4(1.0), data.modelTransform.translation) *
+        glm::dmat4(data.modelTransform.rotation) *
         glm::scale(glm::dmat4(1.0), glm::dvec3(data.modelTransform.scale));
 
     const glm::dmat4 modelViewMatrix = data.camera.combinedViewMatrix() * modelMatrix;
@@ -597,7 +597,7 @@ void RenderableDUMeshes::render(const RenderData& data, RendererTasks&) {
         right = glm::cross(viewDirection, otherVector);
         orthoRight = glm::normalize(
             glm::vec3(worldToModelTransform * glm::vec4(right, 0.0))
-            );
+        );
     }
 
     const glm::vec3 orthoUp = glm::normalize(

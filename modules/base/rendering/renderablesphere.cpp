@@ -268,10 +268,7 @@ void RenderableSphere::render(const RenderData& data, RendererTasks&) {
 
     transform = glm::rotate(transform, glm::half_pi<float>(), glm::vec3(1, 0, 0));
 
-    // Activate shader
-    using IgnoreError = ghoul::opengl::ProgramObject::IgnoreError;
     _shader->activate();
-    _shader->setIgnoreUniformLocationError(IgnoreError::Yes);
 
     _shader->setUniform(_uniformCache.viewProjection, data.camera.viewProjectionMatrix());
     _shader->setUniform(_uniformCache.modelTransform, transform);
@@ -339,7 +336,6 @@ void RenderableSphere::render(const RenderData& data, RendererTasks&) {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
 
-    _shader->setIgnoreUniformLocationError(IgnoreError::No);
     _shader->deactivate();
 }
 

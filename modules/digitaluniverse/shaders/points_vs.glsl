@@ -24,7 +24,7 @@
 
 #version __CONTEXT__
 
-#include "PowerScaling/powerScaling_vs.hglsl"
+#include "z_normalization.hglsl"
 
 in dvec4 in_position;
 in dvec4 in_colormap;

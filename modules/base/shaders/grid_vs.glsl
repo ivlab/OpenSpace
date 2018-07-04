@@ -24,7 +24,7 @@
 
 #version __CONTEXT__
 
-#include "PowerScaling/powerScaling_vs.hglsl"
+#include "z_normalization.hglsl"
 
 layout(location = 0) in vec3 in_position;
 
@@ -35,11 +35,9 @@ uniform mat4 modelViewTransform;
 uniform mat4 projectionTransform;
 
 void main() {
-    vec4 positionViewSpace = modelViewTransform * vec4(in_position, 1.0);
-    vec4 positionClipSpace = projectionTransform * positionViewSpace;
-    vec4 positionScreenSpace = z_normalization(positionClipSpace);
+    vs_positionViewSpace = modelViewTransform * vec4(in_position, 1.0);
+    vec4 positionScreenSpace = z_normalization(projectionTransform * vs_positionViewSpace);
     vs_screenSpaceDepth  = positionScreenSpace.w;
-    vs_positionViewSpace = positionViewSpace;
     
     gl_Position = positionScreenSpace;
 }

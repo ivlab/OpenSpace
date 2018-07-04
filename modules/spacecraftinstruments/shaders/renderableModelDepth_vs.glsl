@@ -24,15 +24,11 @@
 
 #version __CONTEXT__
 
-#include "PowerScaling/powerScaling_vs.hglsl"
-
 layout(location = 0) in vec4 in_position;
 
 uniform mat4 ProjectorMatrix;
 uniform mat4 ModelTransform;
 
-
 void main() {
-    gl_Position = ProjectorMatrix * ModelTransform *
-        psc_to_meter(in_position, vec2(1.0, 0.0));
+    gl_Position = ProjectorMatrix * ModelTransform * vec4(in_position.xyz * pow(10, in_position.w), 1.0);
 }

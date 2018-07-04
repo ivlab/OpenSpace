@@ -67,7 +67,7 @@ void main() {
 
     vec4 vertex = uvToModel(uv, _radius, _segments);
 
-    vec4 raw_pos   = psc_to_meter(vertex, _scaling);
+    vec4 raw_pos   = vec4(vertex.xyz * pow(10, vertex.w), 1.0);
     vec4 projected = ProjectorMatrix * ModelTransform * raw_pos;
 
     projected.x /= projected.w;

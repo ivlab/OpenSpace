@@ -24,7 +24,7 @@
 
 #version __CONTEXT__
 
-#include "znormalization.hglsl"
+#include "z_normalization.hglsl"
 
 layout(location = 0) in vec3 in_position;
 

@@ -24,7 +24,7 @@
  
 #version __CONTEXT__
 
-#include "PowerScaling/powerScaling_vs.hglsl"
+#include "z_normalization.hglsl"
 
 layout(location = 0) in vec3 vertPosition;
 

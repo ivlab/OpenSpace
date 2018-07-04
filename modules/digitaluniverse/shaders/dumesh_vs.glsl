@@ -24,7 +24,7 @@
 
 #version __CONTEXT__
 
-#include "PowerScaling/powerScaling_vs.hglsl"
+#include "z_normalization.hglsl"
 
 in vec3 in_position;
 

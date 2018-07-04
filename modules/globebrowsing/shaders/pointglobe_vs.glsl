@@ -24,7 +24,7 @@
 
 #version __CONTEXT__
 
-#include "PowerScaling/powerScaling_vs.hglsl"
+#include "z_normalization.hglsl"
 
 layout(location = 0) in vec2 in_position;
 
@@ -50,5 +50,5 @@ void main() {
     
     vec4 positionClipSpace = projectionTransform * positionCameraSpace;
     vs_positionClipSpace = z_normalization(positionClipSpace);
-    gl_Position = z_normalization(positionClipSpace);
+    gl_Position = vs_positionClipSpace;
 }

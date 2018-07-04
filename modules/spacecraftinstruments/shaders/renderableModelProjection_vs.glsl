@@ -24,8 +24,6 @@
 
 #version __CONTEXT__
 
-#include "PowerScaling/powerScaling_vs.hglsl"
-
 layout(location = 0) in vec4 in_position;
 layout(location = 1) in vec2 in_st;
 layout(location = 2) in vec3 in_normal;
@@ -41,13 +39,13 @@ uniform mat4 ModelTransform;
 uniform vec3 boresight;
 
 void main() {
-    vec4 raw_pos = psc_to_meter(in_position, vec2(1.0, 0.0));
+    vec4 raw_pos = vec4(in_position.xyz * pow(10, in_position.w), 1.0);
     vs_position = ProjectorMatrix * ModelTransform * raw_pos;
     vs_normal = normalize(ModelTransform * vec4(in_normal,0));
     vs_ndc = vs_position / vs_position.w;
 
     //match clipping plane
-    vec2 texco = (in_st * 2) - 1; 
+    vec2 texco = (in_st * 2) - 1;
     vs_uv = texco;
     gl_Position = vec4(texco, 0.0, 1.0);
 }

@@ -24,7 +24,7 @@
 
 #version __CONTEXT__
 
-#include "PowerScaling/powerScaling_vs.hglsl"
+#include "z_normalization.hglsl"
 
 layout(location = 0) in vec4 in_position;
 layout(location = 1) in vec2 in_st;
@@ -33,7 +33,6 @@ out vec2 vs_st;
 out float vs_screenSpaceDepth;
 
 uniform dmat4 modelViewProjectionTransform;
-
 
 void main() {
     vs_st = in_st;

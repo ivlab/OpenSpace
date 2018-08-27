@@ -198,6 +198,8 @@ RenderableGlobe::RenderableGlobe(const ghoul::Dictionary& dictionary)
         FloatProperty(OrenNayarRoughnessInfo, 0.f, 0.f, 1.f)
     })
     , _debugPropertyOwner({ "Debug" })
+    , _ringsComponent(dictionary)
+    , _hasRings(false)
 {
     setIdentifier("RenderableGlobe");
 
@@ -358,6 +360,12 @@ RenderableGlobe::RenderableGlobe(const ghoul::Dictionary& dictionary)
             }
         }
     }
+
+    if (dictionary.hasKey("Rings")) {
+        _ringsComponent.initialize();
+        addPropertySubOwner(_ringsComponent);
+        _hasRings = true;
+    }
 }
 
 void RenderableGlobe::initializeGL() {
@@ -370,12 +378,17 @@ void RenderableGlobe::initializeGL() {
     // Recompile the shaders directly so that it is not done the first time the render
     // function is called.
     _chunkedLodGlobe->recompileShaders();
+
+    _ringsComponent.initializeGL();
 }
 
 void RenderableGlobe::deinitializeGL() {
     _chunkedLodGlobe->deinitializeGL();
 
     _layerManager->deinitialize();
+
+    _ringsComponent.deinitializeGL();
+
 }
 
 bool RenderableGlobe::isReady() const {
@@ -424,6 +437,11 @@ void RenderableGlobe::render(const RenderData& data, RendererTasks& rendererTask
             _chunkedLodGlobe->render(data, rendererTask);
         }
     }
+
+    if (_hasRings) {
+        _ringsComponent.draw(data);
+    }
+
     if (_savedCamera != nullptr) {
         DebugRenderer::ref().renderCameraFrustum(data, *_savedCamera);
     }

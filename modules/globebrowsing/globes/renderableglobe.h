@@ -27,6 +27,8 @@
 
 #include <openspace/rendering/renderable.h>
 
+#include <modules/globebrowsing/util/ringscomponent.h>
+
 #include <modules/globebrowsing/geometry/ellipsoid.h>
 //#include <modules/globebrowsing/other/distanceswitch.h>
 
@@ -142,6 +144,10 @@ private:
     DebugProperties _debugProperties;
     GeneralProperties _generalProperties;
     properties::PropertyOwner _debugPropertyOwner;
+
+    // Components
+    RingsComponent _ringsComponent;
+    bool _hasRings;
 };
 
 } // namespace openspace::globebrowsing

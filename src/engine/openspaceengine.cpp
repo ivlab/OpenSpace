@@ -863,6 +863,7 @@ void OpenSpaceEngine::runGlobalCustomizationScripts() {
 
 void OpenSpaceEngine::loadFonts() {
     _fontManager = std::make_unique<ghoul::fontrendering::FontManager>(FontAtlasSize);
+    _fontManager->initialize();
 
     for (const std::pair<std::string, std::string>& font : _configuration->fonts) {
         std::string key = font.first;

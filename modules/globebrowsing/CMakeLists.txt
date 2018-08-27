@@ -121,6 +121,8 @@ set(HEADER_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/tile/rawtiledatareader/gdalwrapper.h
     ${CMAKE_CURRENT_SOURCE_DIR}/tile/rawtiledatareader/iodescription.h
     ${CMAKE_CURRENT_SOURCE_DIR}/tile/rawtiledatareader/tiledatatype.h
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/util/ringscomponent.h
 )
 
 set(SOURCE_FILES
@@ -203,6 +205,8 @@ set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/tile/rawtiledatareader/gdalwrapper.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/tile/rawtiledatareader/iodescription.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/tile/rawtiledatareader/tiledatatype.cpp
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/util/ringscomponent.cpp
 )
 source_group("Source Files" FILES ${SOURCE_FILES})
 
@@ -221,6 +225,8 @@ set(SHADER_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/shaders/tileheight.hglsl
     ${CMAKE_CURRENT_SOURCE_DIR}/shaders/tilevertexskirt.hglsl
     ${CMAKE_CURRENT_SOURCE_DIR}/shaders/globeshading.hglsl
+    ${CMAKE_CURRENT_SOURCE_DIR}/shaders/rings_vs.glsl
+    ${CMAKE_CURRENT_SOURCE_DIR}/shaders/rings_fs.glsl
 )
 
 source_group("Shader Files" FILES ${SHADER_FILES})

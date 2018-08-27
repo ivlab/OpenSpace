@@ -161,38 +161,6 @@ namespace openspace {
             _ringsDictionary,
             "RingsComponent"
         );
-
-        /*_size = static_cast<float>(dictionary.value<double>(SizeInfo.identifier));
-        setBoundingSphere(_size);
-        _size.onChange([&]() { _planeIsDirty = true; });
-        addProperty(_size);
-
-        _texturePath = absPath(dictionary.value<std::string>(TextureInfo.identifier));
-        _textureFile = std::make_unique<File>(_texturePath);
-
-        if (dictionary.hasKeyAndValue<glm::vec2>(OffsetInfo.identifier)) {
-            _offset = dictionary.value<glm::vec2>(OffsetInfo.identifier);
-        }
-        addProperty(_offset);
-
-        _texturePath.onChange([&]() { loadTexture(); });
-        addProperty(_texturePath);
-
-        _textureFile->setCallback([&](const File&) { _textureIsDirty = true; });
-
-        if (dictionary.hasKeyAndValue<double>(NightFactorInfo.identifier)) {
-            _nightFactor = static_cast<float>(
-                dictionary.value<double>(NightFactorInfo.identifier)
-                );
-        }
-        addProperty(_nightFactor);
-
-        if (dictionary.hasKeyAndValue<double>(TransparencyInfo.identifier)) {
-            _transparency = static_cast<float>(
-                dictionary.value<double>(TransparencyInfo.identifier)
-                );
-        }
-        addProperty(_transparency);*/        
     }
 
     void RingsComponent::initialize() 

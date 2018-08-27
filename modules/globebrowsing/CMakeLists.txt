@@ -123,6 +123,7 @@ set(HEADER_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/tile/rawtiledatareader/tiledatatype.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/util/ringscomponent.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/util/shadowcomponent.h
 )
 
 set(SOURCE_FILES
@@ -207,6 +208,7 @@ set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/tile/rawtiledatareader/tiledatatype.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/util/ringscomponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/util/shadowcomponent.cpp
 )
 source_group("Source Files" FILES ${SOURCE_FILES})
 

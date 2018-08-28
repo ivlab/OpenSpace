@@ -148,6 +148,7 @@ namespace openspace {
         , _offset(OffsetInfo, glm::vec2(0.f, 1.f), glm::vec2(0.f), glm::vec2(1.f))
         , _nightFactor(NightFactorInfo, 0.33f, 0.f, 1.f)
         , _transparency(TransparencyInfo, 0.15f, 0.f, 1.f)
+        , _enabled({ "Enabled", "Enabled", "Enable/Disable Rings" }, true)
         , _ringsDictionary(dictionary)
     {
         using ghoul::filesystem::File;
@@ -166,6 +167,8 @@ namespace openspace {
     void RingsComponent::initialize() 
     {
         using ghoul::filesystem::File;
+
+        addProperty(_enabled);
 
         _size = static_cast<float>(_ringsDictionary.value<double>(SizeInfo.identifier));
         //setBoundingSphere(_size);
@@ -358,4 +361,7 @@ namespace openspace {
         );
     }
 
+    bool RingsComponent::isEnabled() const {
+        return _enabled;
+    }
 } // namespace openspace

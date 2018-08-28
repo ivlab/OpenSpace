@@ -70,6 +70,8 @@ namespace openspace {
 
         static documentation::Documentation Documentation();
 
+        bool isEnabled() const;
+
     private:
         void loadTexture();
         void createPlane();
@@ -79,6 +81,7 @@ namespace openspace {
         properties::Vec2Property _offset;
         properties::FloatProperty _nightFactor;
         properties::FloatProperty _transparency;
+        properties::BoolProperty _enabled;
 
         std::unique_ptr<ghoul::opengl::ProgramObject> _shader;
         UniformCache(modelViewProjection, textureOffset, transparency, nightFactor,

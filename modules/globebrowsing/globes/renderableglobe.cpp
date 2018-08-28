@@ -438,7 +438,7 @@ void RenderableGlobe::render(const RenderData& data, RendererTasks& rendererTask
         }
     }
 
-    if (_hasRings) {
+    if (_hasRings && _ringsComponent.isEnabled()) {
         _ringsComponent.draw(data);
     }
 

@@ -467,6 +467,7 @@ void RenderableGlobe::update(const UpdateData& data) {
     }
     _layerManager->update();
     _chunkedLodGlobe->update(data);
+    _ringsComponent.update(data);
 }
 
 glm::dvec3 RenderableGlobe::projectOnEllipsoid(glm::dvec3 position) {

@@ -206,7 +206,7 @@ namespace openspace {
 
     void RingsComponent::initializeGL() {
         _shader = OsEng.renderEngine().buildRenderProgram(
-            "RingProgram",
+            "RingsProgram",
             absPath("${MODULE_GLOBEBROWSING}/shaders/rings_vs.glsl"),
             absPath("${MODULE_GLOBEBROWSING}/shaders/rings_fs.glsl")
         );
@@ -284,8 +284,10 @@ namespace openspace {
             _textureIsDirty = false;
         }
 
-        _sunPosition = OsEng.renderEngine().scene()->sceneGraphNode("Sun")->worldPosition() -
-            data.modelTransform.translation;
+        _sunPosition = glm::normalize(
+            OsEng.renderEngine().scene()->sceneGraphNode("Sun")->worldPosition() -
+            data.modelTransform.translation
+        );
     }
 
     void RingsComponent::loadTexture() {

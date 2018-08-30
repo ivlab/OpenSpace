@@ -24,8 +24,8 @@
 
 #include <openspace/rendering/loadingscreen.h>
 
-#include <openspace/engine/openspaceengine.h>
-#include <openspace/engine/wrapper/windowwrapper.h>
+#include <openspace/engine/globals.h>
+#include <openspace/engine/windowdelegate.h>
 #include <ghoul/fmt.h>
 #include <ghoul/filesystem/filesystem.h>
 #include <ghoul/font/font.h>
@@ -116,7 +116,7 @@ LoadingScreen::LoadingScreen(ShowMessage showMessage, ShowNodeNames showNodeName
         { "logoTexture", "useTexture", "color" }
     );
 
-    _loadingFont = OsEng.fontManager().font(
+    _loadingFont = global::fontManager.font(
         "Loading",
         LoadingFontSize,
         ghoul::fontrendering::FontManager::Outline::No,
@@ -124,7 +124,7 @@ LoadingScreen::LoadingScreen(ShowMessage showMessage, ShowNodeNames showNodeName
     );
 
     if (_showMessage) {
-        _messageFont = OsEng.fontManager().font(
+        _messageFont = global::fontManager.font(
             "Loading",
             MessageFontSize,
             ghoul::fontrendering::FontManager::Outline::No,
@@ -133,7 +133,7 @@ LoadingScreen::LoadingScreen(ShowMessage showMessage, ShowNodeNames showNodeName
     }
 
     if (_showNodeNames) {
-        _itemFont = OsEng.fontManager().font(
+        _itemFont = global::fontManager.font(
             "Loading",
             ItemFontSize,
             ghoul::fontrendering::FontManager::Outline::No,
@@ -212,9 +212,9 @@ void LoadingScreen::render() {
     // We have to recalculate the positions here because we will not be informed about a
     // window size change
 
-    const glm::vec2 dpiScaling = OsEng.windowWrapper().dpiScaling();
+    const glm::vec2 dpiScaling = global::windowDelegate.dpiScaling();
     const glm::ivec2 res =
-        glm::vec2(OsEng.windowWrapper().currentDrawBufferResolution()) / dpiScaling;
+        glm::vec2(global::windowDelegate.currentDrawBufferResolution()) / dpiScaling;
 
     float screenAspectRatio = static_cast<float>(res.x) / static_cast<float>(res.y);
 
@@ -551,10 +551,39 @@ void LoadingScreen::render() {
 #endif // LOADINGSCREEN_DEBUGGING
 
             std::string text = item.name;
-            if (item.status == ItemStatus::Started && item.progress > 0) {
-                text += " " +
-                    std::to_string(static_cast<int>(std::round(item.progress * 100))) +
-                    "%";
+            if (item.status == ItemStatus::Started && item.progress.progress > 0) {
+                ProgressInfo& info = item.progress;
+                bool hasSecondLine = (info.totalSize != -1 && info.currentSize != -1);
+
+                int p = static_cast<int>(std::round(info.progress * 100));
+                if (hasSecondLine) {
+                    if (info.totalSize < 1024 * 1024) { // 1MB
+                        text = fmt::format(
+                            "{} ({}%)\n{}/{} {}",
+                            text,
+                            p,
+                            info.currentSize,
+                            info.totalSize,
+                            "bytes"
+                        );
+                    }
+                    else {
+                        float curr = info.currentSize / (1024.f * 1024.f);
+                        float total = info.totalSize / (1024.f * 1024.f);
+
+                        text = fmt::format(
+                            "{} ({}%)\n{:.3f}/{:.3f} {}",
+                            text,
+                            p,
+                            curr,
+                            total,
+                            "MB"
+                        );
+                    }
+                }
+                else {
+                    text = fmt::format("{} ({}%)", text, p);
+                }
             }
 
             renderer.render(*_itemFont, item.ll, text, color);
@@ -582,7 +611,7 @@ void LoadingScreen::render() {
     glEnable(GL_DEPTH_TEST);
 
     std::this_thread::sleep_for(RefreshRate);
-    OsEng.windowWrapper().swapBuffer();
+    global::windowDelegate.swapBuffer();
 }
 
 void LoadingScreen::postMessage(std::string message) {
@@ -629,7 +658,7 @@ void LoadingScreen::setPhase(Phase phase) {
 
 void LoadingScreen::updateItem(const std::string& itemIdentifier,
                                const std::string& itemName, ItemStatus newStatus,
-                               float newProgress)
+                               ProgressInfo progressInfo)
 {
     if (!_showNodeNames) {
         // If we don't want to show the node names, we can disable the updating which
@@ -647,7 +676,7 @@ void LoadingScreen::updateItem(const std::string& itemIdentifier,
     );
     if (it != _items.end()) {
         it->status = newStatus;
-        it->progress = newProgress;
+        it->progress = std::move(progressInfo);
         if (newStatus == ItemStatus::Finished) {
             it->finishedTime = std::chrono::system_clock::now();
         }
@@ -666,7 +695,7 @@ void LoadingScreen::updateItem(const std::string& itemIdentifier,
             itemIdentifier,
             itemName,
             ItemStatus::Started,
-            newProgress,
+            std::move(progressInfo),
             false,
 #ifdef LOADINGSCREEN_DEBUGGING
             false,

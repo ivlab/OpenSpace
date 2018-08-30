@@ -44,7 +44,6 @@ namespace ghoul::opengl { class ProgramObject; }
 
 namespace openspace {
 
-namespace performance { class PerformanceManager; }
 namespace scripting { struct LuaLibrary; }
 
 class Camera;
@@ -72,7 +71,6 @@ public:
 
     void initialize();
     void initializeGL();
-    void deinitialize();
     void deinitializeGL();
 
     void setScene(Scene* scene);
@@ -81,9 +79,6 @@ public:
 
     const Renderer& renderer() const;
     RendererImplementation rendererImplementation() const;
-    RaycasterManager& raycasterManager();
-    DeferredcasterManager& deferredcasterManager();
-
 
     void updateShaderPrograms();
     void updateFade();
@@ -97,10 +92,6 @@ public:
     void renderOverlays(const ShutdownInformation& shutdownInfo);
     void renderEndscreen();
     void postDraw();
-
-    // Performance measurements
-    bool doesPerformanceMeasurements() const;
-    std::shared_ptr<performance::PerformanceManager> performanceManager();
 
     float globalBlackOutFactor();
     void setGlobalBlackOutFactor(float opacity);
@@ -167,8 +158,6 @@ public:
     glm::ivec2 renderingResolution() const;
     glm::ivec2 fontResolution() const;
 
-    properties::PropertyOwner& screenSpaceOwner();
-
 private:
     void setRenderer(std::unique_ptr<Renderer> renderer);
     RendererImplementation rendererFromString(const std::string& renderingMethod) const;
@@ -179,14 +168,10 @@ private:
     void renderShutdownInformation(float timer, float fullTime);
     void renderDashboard();
 
-
     Camera* _camera = nullptr;
     Scene* _scene = nullptr;
-    std::unique_ptr<RaycasterManager> _raycasterManager;
-    std::unique_ptr<DeferredcasterManager> _deferredcasterManager;
 
     properties::BoolProperty _doPerformanceMeasurements;
-    std::shared_ptr<performance::PerformanceManager> _performanceManager;
 
     std::unique_ptr<Renderer> _renderer;
     RendererImplementation _rendererImplementation = RendererImplementation::Invalid;
@@ -218,8 +203,6 @@ private:
     uint64_t _frameNumber = 0;
 
     std::vector<ghoul::opengl::ProgramObject*> _programs;
-    properties::PropertyOwner _screenSpaceOwner;
-    std::vector<std::unique_ptr<ScreenSpaceRenderable>> _screenSpaceRenderables;
 
     std::shared_ptr<ghoul::fontrendering::Font> _fontBig;
     std::shared_ptr<ghoul::fontrendering::Font> _fontInfo;

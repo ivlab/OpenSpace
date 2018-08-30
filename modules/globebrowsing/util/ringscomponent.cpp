@@ -30,9 +30,9 @@
 #include <openspace/documentation/verifier.h>
 #include <openspace/util/updatestructures.h>
 
+#include <openspace/engine/globals.h>
 #include <openspace/engine/openspaceengine.h>
 #include <openspace/engine/moduleengine.h>
-#include <openspace/engine/wrapper/windowwrapper.h>
 
 #include <openspace/rendering/renderengine.h>
 #include <openspace/scene/scene.h>
@@ -208,7 +208,7 @@ namespace openspace {
     }
 
     void RingsComponent::initializeGL() {
-        _shader = OsEng.renderEngine().buildRenderProgram(
+        _shader = global::renderEngine.buildRenderProgram(
             "RingsProgram",
             absPath("${MODULE_GLOBEBROWSING}/shaders/rings_vs.glsl"),
             absPath("${MODULE_GLOBEBROWSING}/shaders/rings_fs.glsl")
@@ -233,7 +233,7 @@ namespace openspace {
         _textureFile = nullptr;
         _texture = nullptr;
 
-        OsEng.renderEngine().removeRenderProgram(_shader.get());
+        global::renderEngine.removeRenderProgram(_shader.get());
         _shader = nullptr;
     }
 
@@ -288,7 +288,7 @@ namespace openspace {
         }
 
         _sunPosition = glm::normalize(
-            OsEng.renderEngine().scene()->sceneGraphNode("Sun")->worldPosition() -
+            global::renderEngine.scene()->sceneGraphNode("Sun")->worldPosition() -
             data.modelTransform.translation
         );
     }

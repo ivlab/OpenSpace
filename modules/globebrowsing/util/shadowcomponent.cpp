@@ -30,9 +30,9 @@
 #include <openspace/documentation/verifier.h>
 #include <openspace/util/updatestructures.h>
 
+#include <openspace/engine/globals.h>
 #include <openspace/engine/openspaceengine.h>
 #include <openspace/engine/moduleengine.h>
-#include <openspace/engine/wrapper/windowwrapper.h>
 
 #include <openspace/rendering/renderengine.h>
 #include <openspace/scene/scene.h>
@@ -314,7 +314,7 @@ namespace openspace {
 
     void ShadowComponent::update(const UpdateData& data) {
         _sunPosition = glm::normalize(
-            OsEng.renderEngine().scene()->sceneGraphNode("Sun")->worldPosition() -
+            global::renderEngine.scene()->sceneGraphNode("Sun")->worldPosition() -
             data.modelTransform.translation
         );
     }
@@ -386,7 +386,6 @@ namespace openspace {
 
             for (int i = 0; i < _shadowDepthTextureHeight; i++) {
                 for (int j = 0; j < _shadowDepthTextureWidth; j++) {
-                    int imgIdx = 3 * ((i * _shadowDepthTextureWidth) + j);
                     int bufIdx = ((_shadowDepthTextureHeight - i - 1) * _shadowDepthTextureWidth) + j;
 
                     float minVal = 0.88f;

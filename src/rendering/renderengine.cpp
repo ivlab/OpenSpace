@@ -748,6 +748,10 @@ void RenderEngine::setCamera(Camera* camera) {
     _camera = camera;
 }
 
+Camera* RenderEngine::camera() const {
+    return _camera;
+}
+
 const Renderer& RenderEngine::renderer() const {
     return *_renderer;
 }

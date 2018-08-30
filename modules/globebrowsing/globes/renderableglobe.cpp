@@ -199,6 +199,7 @@ RenderableGlobe::RenderableGlobe(const ghoul::Dictionary& dictionary)
     })
     , _debugPropertyOwner({ "Debug" })
     , _ringsComponent(dictionary)
+    , _shadowComponent(dictionary)
     , _hasRings(false)
 {
     setIdentifier("RenderableGlobe");
@@ -380,6 +381,8 @@ void RenderableGlobe::initializeGL() {
     _chunkedLodGlobe->recompileShaders();
 
     _ringsComponent.initializeGL();
+
+    _shadowComponent.initializeGL();
 }
 
 void RenderableGlobe::deinitializeGL() {
@@ -389,6 +392,7 @@ void RenderableGlobe::deinitializeGL() {
 
     _ringsComponent.deinitializeGL();
 
+    _shadowComponent.deinitializeGL();
 }
 
 bool RenderableGlobe::isReady() const {
@@ -439,6 +443,9 @@ void RenderableGlobe::render(const RenderData& data, RendererTasks& rendererTask
     }
 
     if (_hasRings && _ringsComponent.isEnabled()) {
+        _shadowComponent.begin(data);
+        _ringsComponent.draw(data);
+        _shadowComponent.end(data);
         _ringsComponent.draw(data);
     }
 
@@ -468,6 +475,7 @@ void RenderableGlobe::update(const UpdateData& data) {
     _layerManager->update();
     _chunkedLodGlobe->update(data);
     _ringsComponent.update(data);
+    _shadowComponent.update(data);
 }
 
 glm::dvec3 RenderableGlobe::projectOnEllipsoid(glm::dvec3 position) {

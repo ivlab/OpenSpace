@@ -61,7 +61,7 @@ namespace openspace {
         void initialize();
         void initializeGL();
         void deinitializeGL();
-        bool deinitialize();
+        //bool deinitialize();
 
         bool isReady() const;
 

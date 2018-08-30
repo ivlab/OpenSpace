@@ -33,6 +33,8 @@
 #include <openspace/properties/scalar/floatproperty.h>
 #include <openspace/properties/triggerproperty.h>
 
+//#include <openspace/util/camera.h>
+
 namespace ghoul {
     class Dictionary;
     class SharedMemory;
@@ -134,6 +136,10 @@ public:
      */
     void setCamera(Camera* camera);
 
+    /**
+     * Returns the current Camera object.
+     */
+    Camera * camera() const;
 
     void setRendererFromString(const std::string& renderingMethod);
 

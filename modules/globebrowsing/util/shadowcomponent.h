@@ -39,43 +39,77 @@
 #include <ghoul/opengl/uniformcache.h>
 
 namespace ghoul {
-	class Dictionary;
+    class Dictionary;
 }
    
 namespace ghoul::filesystem { class File; }
 
 namespace ghoul::opengl {
-	class ProgramObject;
+    class ProgramObject;
 } // namespace ghoul::opengl
 
 namespace openspace {
-	struct RenderData;
-	struct UpdateData;
+    struct RenderData;
+    struct UpdateData;
 
-	namespace documentation { struct Documentation; }
+    namespace documentation { struct Documentation; }
 
-	class ShadowComponent : public properties::PropertyOwner {
-	public:
-		ShadowComponent(const ghoul::Dictionary& dictionary);
+    static const GLfloat shadowBorder[] = { 1.f, 0.f, 0.f, 0.f };
 
-		void initialize();
-		void initializeGL();
-		void deinitializeGL();
-		bool deinitialize();
+    class ShadowComponent : public properties::PropertyOwner {
+    public:
+        ShadowComponent(const ghoul::Dictionary& dictionary);
 
-		bool isReady() const;
+        void initialize();
+        void initializeGL();
+        void deinitializeGL();
+        //bool deinitialize();
 
-		void draw(const RenderData& data);
-		void update(const UpdateData& data);
+        bool isReady() const;
 
-		static documentation::Documentation Documentation();
+        void begin(const RenderData& data);
+        void end(const RenderData& data);
+        void update(const UpdateData& data);
 
-	private:
-		
+        static documentation::Documentation Documentation();
 
-		ghoul::Dictionary _shadowMapDictionary;
-		
-	};
+    private:
+        void createDepthTexture();
+        void createShadowFBO();
+
+        // Debug
+        void saveDepthBuffer();
+
+    private:
+        std::unique_ptr<ghoul::opengl::ProgramObject> _shaderProgram;
+        
+        ghoul::Dictionary _shadowMapDictionary;
+        
+        UniformCache(Color, MVP, sunPosition, sunIntensity,
+            shadowMap, shadowMatrix) _uniformCache;
+
+        int _shadowDepthTextureHeight;
+        int _shadowDepthTextureWidth;
+        
+        GLuint _shadowDepthTexture;
+        GLuint _shadowFBO;
+        GLuint _firstPassSubroutine;
+        GLuint _secondPassSubroutine;
+        GLint _defaultFBO;
+        GLint _mViewport[4];
+
+        GLboolean _faceCulling;
+        
+        GLenum _faceToCull;
+
+        glm::vec3 _sunPosition;
+
+        glm::dmat4 _shadowMatrix;
+
+        glm::dvec3 _cameraPos;
+        glm::dvec3 _cameraFocus;
+        
+    };
 
 } // namespace openspace
 

@@ -28,6 +28,7 @@
 #include <openspace/rendering/renderable.h>
 
 #include <modules/globebrowsing/util/ringscomponent.h>
+#include <modules/globebrowsing/util/shadowcomponent.h>
 
 #include <modules/globebrowsing/geometry/ellipsoid.h>
 //#include <modules/globebrowsing/other/distanceswitch.h>
@@ -147,6 +148,7 @@ private:
 
     // Components
     RingsComponent _ringsComponent;
+    ShadowComponent _shadowComponent;
     bool _hasRings;
 };
 

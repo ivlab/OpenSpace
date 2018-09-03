@@ -25,32 +25,24 @@
 #include <modules/galaxy/rendering/renderablegalaxy.h>
 
 #include <modules/galaxy/rendering/galaxyraycaster.h>
-
-#include <ghoul/io/texture/texturereader.h>
-
-#include <modules/galaxy/rendering/galaxyraycaster.h>
-#include <openspace/util/boxgeometry.h>
 #include <modules/volume/rawvolume.h>
-#include <openspace/util/updatestructures.h>
-
-#include <openspace/rendering/renderable.h>
-#include <openspace/engine/openspaceengine.h>
-#include <openspace/rendering/renderengine.h>
-#include <openspace/rendering/raycastermanager.h>
-#include <ghoul/glm.h>
-#include <glm/gtc/matrix_transform.hpp>
-#include <ghoul/opengl/ghoul_gl.h>
-
 #include <modules/volume/rawvolumereader.h>
+#include <openspace/engine/globals.h>
+#include <openspace/rendering/raycastermanager.h>
+#include <openspace/rendering/renderable.h>
+#include <openspace/rendering/renderengine.h>
+#include <openspace/util/boxgeometry.h>
+#include <openspace/util/updatestructures.h>
+#include <ghoul/glm.h>
 #include <ghoul/filesystem/filesystem.h>
+#include <ghoul/io/texture/texturereader.h>
 #include <ghoul/logging/logmanager.h>
+#include <ghoul/opengl/ghoul_gl.h>
+#include <ghoul/opengl/programobject.h>
 #include <ghoul/opengl/texture.h>
 #include <ghoul/opengl/textureunit.h>
-
-#include <ghoul/opengl/programobject.h>
-
+#include <glm/gtc/matrix_transform.hpp>
 #include <fstream>
-
 
 namespace {
     constexpr const char* GlslRayCastPath  = "${MODULES}/toyvolume/shaders/rayCast.glsl";
@@ -123,7 +115,7 @@ namespace openspace {
     }
     glm::vec3 volumeSize;
     if (volumeDictionary.getValue("Size", volumeSize)) {
-        _volumeSize = static_cast<glm::vec3>(volumeSize);
+        _volumeSize = volumeSize;
     }
     else {
         LERROR("No volume dimensions specified.");
@@ -175,14 +167,14 @@ void RenderableGalaxy::initializeGL() {
     _raycaster = std::make_unique<GalaxyRaycaster>(*_texture);
     _raycaster->initialize();
 
-    OsEng.renderEngine().raycasterManager().attachRaycaster(*_raycaster.get());
+    global::raycasterManager.attachRaycaster(*_raycaster.get());
 
     auto onChange = [&](bool enabled) {
         if (enabled) {
-            OsEng.renderEngine().raycasterManager().attachRaycaster(*_raycaster.get());
+            global::raycasterManager.attachRaycaster(*_raycaster.get());
         }
         else {
-            OsEng.renderEngine().raycasterManager().detachRaycaster(*_raycaster.get());
+            global::raycasterManager.detachRaycaster(*_raycaster.get());
         }
     };
 
@@ -250,8 +242,7 @@ void RenderableGalaxy::initializeGL() {
         GL_STATIC_DRAW
     );
 
-    RenderEngine& renderEngine = OsEng.renderEngine();
-    _pointsProgram = renderEngine.buildRenderProgram(
+    _pointsProgram = global::renderEngine.buildRenderProgram(
         "Galaxy points",
         absPath("${MODULE_GALAXY}/shaders/points.vs"),
         absPath("${MODULE_GALAXY}/shaders/points.fs")
@@ -266,11 +257,11 @@ void RenderableGalaxy::initializeGL() {
 
     glBindBuffer(GL_ARRAY_BUFFER, _positionVbo);
     glEnableVertexAttribArray(positionAttrib);
-    glVertexAttribPointer(positionAttrib, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glVertexAttribPointer(positionAttrib, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 
     glBindBuffer(GL_ARRAY_BUFFER, _colorVbo);
     glEnableVertexAttribArray(colorAttrib);
-    glVertexAttribPointer(colorAttrib, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glVertexAttribPointer(colorAttrib, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
@@ -278,7 +269,7 @@ void RenderableGalaxy::initializeGL() {
 
 void RenderableGalaxy::deinitializeGL() {
     if (_raycaster) {
-        OsEng.renderEngine().raycasterManager().detachRaycaster(*_raycaster.get());
+        global::raycasterManager.detachRaycaster(*_raycaster.get());
         _raycaster = nullptr;
     }
 }
@@ -299,11 +290,8 @@ void RenderableGalaxy::update(const UpdateData& data) {
         transform = glm::rotate(transform, eulerRotation.y, glm::vec3(0, 1, 0));
         transform = glm::rotate(transform, eulerRotation.z,  glm::vec3(0, 0, 1));
 
-        glm::mat4 volumeTransform = glm::scale(
-            transform,
-            static_cast<glm::vec3>(_volumeSize)
-        );
-        _pointTransform = glm::scale(transform, static_cast<glm::vec3>(_pointScaling));
+        glm::mat4 volumeTransform = glm::scale(transform, _volumeSize);
+        _pointTransform = glm::scale(transform, _pointScaling);
 
         const glm::vec4 translation = glm::vec4(_translation.value(), 0.0);
 
@@ -325,7 +313,7 @@ void RenderableGalaxy::render(const RenderData& data, RendererTasks& tasks) {
 
     const glm::vec3 position = data.camera.position().vec3();
     const float length = safeLength(position);
-    const glm::vec3 galaxySize = static_cast<glm::vec3>(_volumeSize);
+    const glm::vec3 galaxySize = _volumeSize;
 
     const float maxDim = std::max(std::max(galaxySize.x, galaxySize.y), galaxySize.z);
 

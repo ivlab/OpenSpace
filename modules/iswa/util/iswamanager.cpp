@@ -33,7 +33,8 @@
 #include <modules/iswa/rendering/iswakameleongroup.h>
 #include <modules/iswa/rendering/textureplane.h>
 #include <modules/kameleon/include/kameleonwrapper.h>
-#include <openspace/engine/openspaceengine.h>
+#include <openspace/json.h>
+#include <openspace/engine/globals.h>
 #include <openspace/scene/scene.h>
 #include <openspace/scripting/scriptengine.h>
 #include <openspace/util/spicemanager.h>
@@ -44,25 +45,6 @@
 #include <fstream>
 
 #include "iswamanager_lua.inl"
-
-#ifdef __clang__
-#pragma clang diagnostic push
-// #pragma clang diagnostic ignored "-Wuseless-cast"
-// #pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
-#elif (defined __GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wuseless-cast"
-#pragma GCC diagnostic ignored "-Wzero-as-null-pointer-constant"
-#endif // __clang__
-
-#include <modules/iswa/ext/json.h>
-
-#ifdef __clang__
-#pragma clang diagnostic pop
-#elif (defined __GNUC__)
-#pragma GCC diagnostic pop
-#endif // __clang__
-
 
 #ifdef OPENSPACE_MODULE_KAMELEON_ENABLED
 
@@ -102,7 +84,7 @@ namespace {
 
     void createScreenSpace(int id) {
         std::string idStr = std::to_string(id);
-        OsEng.scriptEngine().queueScript(
+        openspace::global::scriptEngine.queueScript(
             "openspace.iswa.addScreenSpaceCygnet({CygnetId =" + idStr + "});",
             openspace::scripting::ScriptEngine::RemoteScripting::Yes
         );
@@ -123,7 +105,7 @@ IswaManager::IswaManager()
     _geom[CygnetGeometry::Plane] = "Plane";
     _geom[CygnetGeometry::Sphere] = "Sphere";
 
-    OsEng.downloadManager().fetchFile(
+    global::downloadManager.fetchFile(
         "http://iswa3.ccmc.gsfc.nasa.gov/IswaSystemWebApp/CygnetHealthServlet",
         [this](const DownloadManager::MemoryFile& file) {
             fillCygnetInfo(std::string(file.buffer));
@@ -178,7 +160,7 @@ void IswaManager::addIswaCygnet(int id, const std::string& type, std::string gro
             };
 
         // Download metadata
-        OsEng.downloadManager().fetchFile(
+        global::downloadManager.fetchFile(
             _baseUrl + std::to_string(-id),
             metadataCallback,
             [id](const std::string& err) {
@@ -209,7 +191,7 @@ void IswaManager::addKameleonCdf(std::string groupName, int pos) {
 std::future<DownloadManager::MemoryFile> IswaManager::fetchImageCygnet(int id,
                                                                        double timestamp)
 {
-    return OsEng.downloadManager().fetchFile(
+    return global::downloadManager.fetchFile(
             iswaUrl(id, timestamp, "image"),
             [id](const DownloadManager::MemoryFile&) {
                 LDEBUG(
@@ -229,7 +211,7 @@ std::future<DownloadManager::MemoryFile> IswaManager::fetchImageCygnet(int id,
 std::future<DownloadManager::MemoryFile> IswaManager::fetchDataCygnet(int id,
                                                                       double timestamp)
 {
-    return OsEng.downloadManager().fetchFile(
+    return global::downloadManager.fetchFile(
             iswaUrl(id, timestamp, "data"),
             [id](const DownloadManager::MemoryFile&) {
                 LDEBUG(
@@ -323,7 +305,7 @@ std::shared_ptr<MetadataFuture> IswaManager::downloadMetadata(int id) {
     std::shared_ptr<MetadataFuture> metaFuture = std::make_shared<MetadataFuture>();
 
     metaFuture->id = id;
-    OsEng.downloadManager().fetchFile(
+    global::downloadManager.fetchFile(
         _baseUrl + std::to_string(-id),
         [&metaFuture](const DownloadManager::MemoryFile& file) {
             metaFuture->json = std::string(file.buffer, file.buffer + file.size);
@@ -522,7 +504,7 @@ void IswaManager::createPlane(MetadataFuture& data) {
 
     data.name = name;
 
-    if (OsEng.renderEngine().scene()->sceneGraphNode(name)) {
+    if (global::renderEngine.scene()->sceneGraphNode(name)) {
         LERROR("A node with name \"" + name + "\" already exist");
         return;
     }
@@ -530,7 +512,7 @@ void IswaManager::createPlane(MetadataFuture& data) {
     std::string luaTable = jsonPlaneToLuaTable(data);
     if (!luaTable.empty()) {
         std::string script = "openspace.addSceneGraphNode(" + luaTable + ");";
-        OsEng.scriptEngine().queueScript(
+        global::scriptEngine.queueScript(
             script,
             scripting::ScriptEngine::RemoteScripting::Yes
         );
@@ -555,14 +537,14 @@ void IswaManager::createSphere(MetadataFuture& data) {
 
     data.name = name;
 
-    if (OsEng.renderEngine().scene()->sceneGraphNode(name)) {
+    if (global::renderEngine.scene()->sceneGraphNode(name)) {
         LERROR("A node with name \"" + name +"\" already exist");
         return;
     }
     std::string luaTable = jsonSphereToLuaTable(data);
     if (luaTable != "") {
         std::string script = "openspace.addSceneGraphNode(" + luaTable + ");";
-        OsEng.scriptEngine().queueScript(
+        global::scriptEngine.queueScript(
             script,
             scripting::ScriptEngine::RemoteScripting::Yes
         );
@@ -588,7 +570,7 @@ void IswaManager::createKameleonPlane(CdfInfo info, std::string cut) {
 
         info.name = info.name + "-" + cut;
 
-        if (OsEng.renderEngine().scene()->sceneGraphNode(info.name)) {
+        if (global::renderEngine.scene()->sceneGraphNode(info.name)) {
             LERROR("A node with name \"" + info.name +"\" already exist");
             return;
         }
@@ -596,7 +578,7 @@ void IswaManager::createKameleonPlane(CdfInfo info, std::string cut) {
         std::string luaTable = parseKWToLuaTable(info, cut);
         if (!luaTable.empty()) {
             std::string script = "openspace.addSceneGraphNode(" + luaTable + ");";
-            OsEng.scriptEngine().queueScript(
+            global::scriptEngine.queueScript(
                 script,
                 scripting::ScriptEngine::RemoteScripting::Yes
             );
@@ -635,7 +617,7 @@ void IswaManager::createFieldline(std::string name, std::string cdfPath,
         "}";
         if (!luaTable.empty()) {
             std::string script = "openspace.addSceneGraphNode(" + luaTable + ");";
-            OsEng.scriptEngine().queueScript(
+            global::scriptEngine.queueScript(
                 script,
                 scripting::ScriptEngine::RemoteScripting::Yes
             );

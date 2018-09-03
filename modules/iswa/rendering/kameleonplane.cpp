@@ -28,7 +28,8 @@
 #include <modules/iswa/rendering/iswakameleongroup.h>
 #include <modules/iswa/util/dataprocessorkameleon.h>
 #include <modules/iswa/util/iswamanager.h>
-#include <openspace/engine/openspaceengine.h>
+#include <openspace/json.h>
+#include <openspace/engine/globals.h>
 #include <openspace/rendering/renderengine.h>
 #include <openspace/scene/scene.h>
 #include <openspace/scripting/scriptengine.h>
@@ -37,20 +38,6 @@
 #include <ghoul/opengl/programobject.h>
 #include <ghoul/opengl/texture.h>
 #include <fstream>
-
- #ifdef __clang__
-#elif defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wzero-as-null-pointer-constant"
-#endif // __GNUC__
-
-#include <modules/iswa/ext/json.h>
-
-#ifdef __clang__
-
-#elif defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif // __GNUC__
 
 namespace {
     using json = nlohmann::json;
@@ -125,7 +112,7 @@ void KameleonPlane::deinitializeGL() {
 
 void KameleonPlane::initializeGL() {
     if (!_shader) {
-        _shader = OsEng.renderEngine().buildRenderProgram(
+        _shader = global::renderEngine.buildRenderProgram(
             "DataPlaneProgram",
             absPath("${MODULE_ISWA}/shaders/dataplane_vs.glsl"),
             absPath("${MODULE_ISWA}/shaders/dataplane_fs.glsl")
@@ -285,7 +272,7 @@ void KameleonPlane::updateFieldlineSeeds() {
             seedPath.first
         );
         if (it == selectedOptions.end() && std::get<2>(seedPath.second)) {
-            SceneGraphNode* n = OsEng.renderEngine().scene()->sceneGraphNode(
+            SceneGraphNode* n = global::renderEngine.scene()->sceneGraphNode(
                 std::get<0>(seedPath.second)
             );
             if (!n) {
@@ -293,14 +280,14 @@ void KameleonPlane::updateFieldlineSeeds() {
             }
 
             LDEBUG("Removed fieldlines: " + std::get<0>(seedPath.second));
-            OsEng.scriptEngine().queueScript(
+            global::scriptEngine.queueScript(
                 "openspace.removeSceneGraphNode('" + std::get<0>(seedPath.second) + "')",
                 scripting::ScriptEngine::RemoteScripting::Yes
             );
             std::get<2>(seedPath.second) = false;
         // if this option was turned on
         } else if (it != selectedOptions.end() && !std::get<2>(seedPath.second)) {
-            SceneGraphNode* n = OsEng.renderEngine().scene()->sceneGraphNode(
+            SceneGraphNode* n = global::renderEngine.scene()->sceneGraphNode(
                 std::get<0>(seedPath.second)
             );
             if (n) {

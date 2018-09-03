@@ -22,13 +22,13 @@
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                                         *
  ****************************************************************************************/
 
-#include <modules/globebrowsing/dashboard/dashboardglobelocation.h>
+#include <modules/globebrowsing/dashboard/dashboarditemglobelocation.h>
 
 #include <modules/globebrowsing/geometry/geodetic2.h>
 #include <modules/globebrowsing/globes/renderableglobe.h>
 #include <openspace/documentation/documentation.h>
 #include <openspace/documentation/verifier.h>
-#include <openspace/engine/openspaceengine.h>
+#include <openspace/engine/globals.h>
 #include <openspace/interaction/navigationhandler.h>
 #include <openspace/scene/scenegraphnode.h>
 #include <openspace/util/distanceconversion.h>
@@ -111,11 +111,12 @@ documentation::Documentation DashboardItemGlobeLocation::Documentation() {
     };
 }
 
-DashboardItemGlobeLocation::DashboardItemGlobeLocation(const ghoul::Dictionary& dictionary)
+DashboardItemGlobeLocation::DashboardItemGlobeLocation(
+                                                      const ghoul::Dictionary& dictionary)
     : DashboardItem(dictionary)
     , _fontName(FontNameInfo, KeyFontMono)
     , _fontSize(FontSizeInfo, DefaultFontSize, 6.f, 144.f, 1.f)
-    , _font(OsEng.fontManager().font(KeyFontMono, 10))
+    , _font(global::fontManager.font(KeyFontMono, 10))
 {
     documentation::testSpecificationAndThrow(
         Documentation(),
@@ -131,30 +132,30 @@ DashboardItemGlobeLocation::DashboardItemGlobeLocation(const ghoul::Dictionary& 
     }
 
     _fontName.onChange([this]() {
-        _font = OsEng.fontManager().font(_fontName, _fontSize);
+        _font = global::fontManager.font(_fontName, _fontSize);
     });
     addProperty(_fontName);
 
     _fontSize.onChange([this]() {
-        _font = OsEng.fontManager().font(_fontName, _fontSize);
+        _font = global::fontManager.font(_fontName, _fontSize);
     });
     addProperty(_fontSize);
 
-    _font = OsEng.fontManager().font(_fontName, _fontSize);
+    _font = global::fontManager.font(_fontName, _fontSize);
 }
 
 void DashboardItemGlobeLocation::render(glm::vec2& penPosition) {
     using namespace globebrowsing;
 
-    SceneGraphNode* n = OsEng.navigationHandler().focusNode();
+    SceneGraphNode* n = global::navigationHandler.focusNode();
     const RenderableGlobe* globe = dynamic_cast<const  RenderableGlobe*>(n->renderable());
     if (!globe) {
         return;
     }
 
-    const glm::dvec3 cameraPosition = OsEng.navigationHandler().camera()->positionVec3();
+    const glm::dvec3 cameraPosition = global::navigationHandler.camera()->positionVec3();
     const glm::dmat4 inverseModelTransform =
-        OsEng.navigationHandler().focusNode()->inverseModelTransform();
+        global::navigationHandler.focusNode()->inverseModelTransform();
     const glm::dvec3 cameraPositionModelSpace =
         glm::dvec3(inverseModelTransform * glm::dvec4(cameraPosition, 1.0));
     const SurfacePositionHandle posHandle = globe->calculateSurfacePositionHandle(

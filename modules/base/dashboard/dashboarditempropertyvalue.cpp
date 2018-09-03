@@ -26,7 +26,7 @@
 
 #include <openspace/documentation/documentation.h>
 #include <openspace/documentation/verifier.h>
-#include <openspace/engine/openspaceengine.h>
+#include <openspace/engine/globals.h>
 #include <openspace/util/timemanager.h>
 #include <openspace/query/query.h>
 #include <ghoul/font/font.h>
@@ -106,7 +106,8 @@ documentation::Documentation DashboardItemPropertyValue::Documentation() {
     };
 }
 
-DashboardItemPropertyValue::DashboardItemPropertyValue(const ghoul::Dictionary& dictionary)
+DashboardItemPropertyValue::DashboardItemPropertyValue(
+                                                      const ghoul::Dictionary& dictionary)
     : DashboardItem(dictionary)
     , _fontName(FontNameInfo, KeyFontMono)
     , _fontSize(FontSizeInfo, DefaultFontSize, 6.f, 144.f, 1.f)
@@ -123,7 +124,7 @@ DashboardItemPropertyValue::DashboardItemPropertyValue(const ghoul::Dictionary& 
         _fontName = dictionary.value<std::string>(FontNameInfo.identifier);
     }
     _fontName.onChange([this](){
-        _font = OsEng.fontManager().font(_fontName, _fontSize);
+        _font = global::fontManager.font(_fontName, _fontSize);
     });
     addProperty(_fontName);
 
@@ -133,7 +134,7 @@ DashboardItemPropertyValue::DashboardItemPropertyValue(const ghoul::Dictionary& 
         );
     }
     _fontSize.onChange([this](){
-        _font = OsEng.fontManager().font(_fontName, _fontSize);
+        _font = global::fontManager.font(_fontName, _fontSize);
     });
     addProperty(_fontSize);
 
@@ -150,7 +151,7 @@ DashboardItemPropertyValue::DashboardItemPropertyValue(const ghoul::Dictionary& 
     }
     addProperty(_displayString);
 
-    _font = OsEng.fontManager().font(_fontName, _fontSize);
+    _font = global::fontManager.font(_fontName, _fontSize);
 }
 
 void DashboardItemPropertyValue::render(glm::vec2& penPosition) {

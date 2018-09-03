@@ -153,13 +153,13 @@ OrbitalNavigator::OrbitalNavigator()
     , _minimumAllowedDistance(MinimumDistanceInfo, 10.0f, 0.0f, 10000.f)
     , _mouseSensitivity(MouseSensitivityInfo, 15.0f, 1.0f, 50.f)
     , _joystickSensitivity(JoystickSensitivityInfo, 10.0f, 1.0f, 50.f)
-    , _mouseStates(_mouseSensitivity * 0.0001, 1 / (_friction.friction + 0.0000001))
-    , _joystickStates(_joystickSensitivity * 0.1, 1 / (_friction.friction + 0.0000001))
     , _useAdaptiveStereoscopicDepth(UseAdaptiveStereoscopicDepthInfo, true)
-    , _staticViewScaleExponent(StaticViewScaleExponentInfo, 0.f, -30, 10)
     , _stereoscopicDepthOfFocusSurface(StereoscopicDepthOfFocusSurfaceInfo, 8, 0.25, 100)
+    , _staticViewScaleExponent(StaticViewScaleExponentInfo, 0.f, -30, 10)
     , _rotateToFocusInterpolationTime(RotateToFocusInterpolationTimeInfo, 2.0, 0.0, 10.0)
     , _stereoInterpolationTime(StereoInterpolationTimeInfo, 8.0, 0.0, 10.0)
+    , _mouseStates(_mouseSensitivity * 0.0001, 1 / (_friction.friction + 0.0000001))
+    , _joystickStates(_joystickSensitivity * 0.1, 1 / (_friction.friction + 0.0000001))
 {
     _followRotationInterpolator.setTransferFunction([](double t) {
         const double res = 3.0 * t*t - 2.0 * t*t*t;
@@ -512,22 +512,6 @@ glm::dquat OrbitalNavigator::interpolateLocalRotation(double deltaTime,
     else {
         return localCameraRotation;
     }
-
-    double t = _rotateToFocusNodeInterpolator.value();
-    _rotateToFocusNodeInterpolator.setDeltaTime(static_cast<float>(deltaTime));
-    _rotateToFocusNodeInterpolator.step();
-
-    glm::dquat result = glm::slerp(
-        localCameraRotation,
-        glm::dquat(glm::dvec3(0.0)),
-        glm::min(t * _rotateToFocusNodeInterpolator.deltaTimeScaled(), 1.0)
-    );
-
-    if (angle(result) < 0.01) {
-        _rotateToFocusNodeInterpolator.end();
-    }
-
-    return result;
 }
 
 double OrbitalNavigator::interpolateCameraToSurfaceDistance(double deltaTime,

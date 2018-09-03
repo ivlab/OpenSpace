@@ -22,20 +22,75 @@
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                                         *
  ****************************************************************************************/
 
-#version __CONTEXT__
+#include <modules/base/lightsource/cameralightsource.h>
 
-in vec2 st;
-out vec4 FragColor;
+#include <openspace/documentation/documentation.h>
+#include <openspace/documentation/verifier.h>
+#include <openspace/util/updatestructures.h>
 
-uniform bool useTexture;
-uniform sampler2D logoTexture;
-uniform vec4 color;
+namespace {
+    constexpr openspace::properties::Property::PropertyInfo IntensityInfo = {
+        "Intensity",
+        "Intensity",
+        "The intensity of this light source"
+    };
+} // namespace
 
-void main() {
-    if (useTexture) {
-        FragColor = texture(logoTexture, st);
-    }
-    else {
-        FragColor = color;
+namespace openspace {
+
+documentation::Documentation CameraLightSource::Documentation() {
+    using namespace openspace::documentation;
+    return {
+        "Camera Light Source",
+        "base_camera_light_source",
+        {
+            {
+                "Type",
+                new StringEqualVerifier("CameraLightSource"),
+                Optional::No,
+                "The type of this light source"
+            },
+            {
+                IntensityInfo.identifier,
+                new DoubleVerifier,
+                Optional::Yes,
+                IntensityInfo.description
+            }
+        }
+    };
+}
+
+CameraLightSource::CameraLightSource()
+    : LightSource()
+    , _intensity(IntensityInfo, 1.f, 0.f, 1.f)
+{
+    addProperty(_intensity);
+}
+
+CameraLightSource::CameraLightSource(const ghoul::Dictionary& dictionary)
+    : LightSource(dictionary)
+    , _intensity(IntensityInfo, 1.f, 0.f, 1.f)
+{
+    addProperty(_intensity);
+
+    documentation::testSpecificationAndThrow(Documentation(),
+                                             dictionary,
+                                             "CameraLightSource");
+
+
+    if (dictionary.hasValue<double>(IntensityInfo.identifier)) {
+        _intensity = static_cast<float>(
+            dictionary.value<double>(IntensityInfo.identifier)
+        );
     }
 }
+
+float CameraLightSource::intensity() const {
+    return _intensity;
+}
+
+glm::vec3 CameraLightSource::directionViewSpace(const RenderData&) const {
+    return glm::vec3(0.f, 0.f, 1.f);
+}
+
+} // namespace openspace

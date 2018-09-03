@@ -22,38 +22,36 @@
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                                         *
  ****************************************************************************************/
 
-#ifndef __OPENSPACE_MODULE_GLOBEBROWSING___DASHBOARDITEMGLOBELOCATION___H__
-#define __OPENSPACE_MDOULE_GLOBEBROWSING___DASHBOARDITEMGLOBELOCATION___H__
+#ifndef __OPENSPACE_MODULE_BASE___TIMEFRAMEINTERVAL___H__
+#define __OPENSPACE_MODULE_BASE___TIMEFRAMEINTERVAL___H__
 
-#include <openspace/rendering/dashboarditem.h>
+#include <openspace/scene/timeframe.h>
 
-#include <openspace/properties/stringproperty.h>
-#include <openspace/properties/scalar/floatproperty.h>
-
-namespace ghoul::fontrendering { class Font; }
+#include <openspace/properties/scalar/doubleproperty.h>
+#include <openspace/properties/scalar/boolproperty.h>
 
 namespace openspace {
 
+class Time;
+
 namespace documentation { struct Documentation; }
 
-class DashboardItemGlobeLocation : public DashboardItem {
+class TimeFrameInterval : public TimeFrame {
 public:
-    DashboardItemGlobeLocation(const ghoul::Dictionary& dictionary);
-    ~DashboardItemGlobeLocation() = default;
-
-    void render(glm::vec2& penPosition) override;
-
-    glm::vec2 size() const override;
+    TimeFrameInterval();
+    TimeFrameInterval(const ghoul::Dictionary& dictionary);
+    bool isActive(const Time&) const override;
 
     static documentation::Documentation Documentation();
 
 private:
-    properties::StringProperty _fontName;
-    properties::FloatProperty _fontSize;
+    properties::BoolProperty _hasStart;
+    properties::DoubleProperty _start;
 
-    std::shared_ptr<ghoul::fontrendering::Font> _font;
+    properties::BoolProperty _hasEnd;
+    properties::DoubleProperty _end;
 };
 
 } // namespace openspace
 
-#endif // __OPENSPACE_MODULE_GLOBEBROWSING___DASHBOARDITEMGLOBELOCATION___H__
+#endif // __OPENSPACE_MODULE_BASE___TIMEFRAMEINTERVAL___H__

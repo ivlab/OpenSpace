@@ -24,8 +24,9 @@
 
 #include <openspace/rendering/framebufferrenderer.h>
 
-#include <openspace/engine/openspaceengine.h>
-#include <openspace/engine/wrapper/windowwrapper.h>
+#include <openspace/engine/globals.h>
+#include <openspace/engine/windowdelegate.h>
+#include <openspace/performance/performancemanager.h>
 #include <openspace/performance/performancemeasurement.h>
 #include <openspace/rendering/deferredcaster.h>
 #include <openspace/rendering/deferredcastermanager.h>
@@ -49,6 +50,11 @@
 
 namespace {
     constexpr const char* _loggerCat = "FramebufferRenderer";
+
+    constexpr const std::array<const char*, 3> UniformNames = {
+        "mainColorTexture", "blackoutFactor", "nAaSamples"
+    };
+
     constexpr const char* ExitFragmentShaderPath =
         "${SHADERS}/framebuffer/exitframebuffer.frag";
     constexpr const char* RaycastFragmentShaderPath =
@@ -59,7 +65,7 @@ namespace {
         "${SHADERS}/framebuffer/renderframebuffer.frag";
 
     void saveTextureToMemory(GLenum attachment, int width, int height,
-        std::vector<double>& memory)
+                             std::vector<double>& memory)
     {
         memory.clear();
         memory.resize(width * height * 3);
@@ -222,12 +228,10 @@ void FramebufferRenderer::initialize() {
         absPath("${SHADERS}/framebuffer/resolveframebuffer.frag")
     );
 
-    _uniformCache.mainColorTexture = _resolveProgram->uniformLocation("mainColorTexture");
-    _uniformCache.blackoutFactor = _resolveProgram->uniformLocation("blackoutFactor");
-    _uniformCache.nAaSamples = _resolveProgram->uniformLocation("nAaSamples");
+    ghoul::opengl::updateUniformLocations(*_resolveProgram, _uniformCache, UniformNames);
 
-    OsEng.renderEngine().raycasterManager().addListener(*this);
-    OsEng.renderEngine().deferredcasterManager().addListener(*this);
+    global::raycasterManager.addListener(*this);
+    global::deferredcasterManager.addListener(*this);
 }
 
 void FramebufferRenderer::deinitialize() {
@@ -251,8 +255,8 @@ void FramebufferRenderer::deinitialize() {
     glDeleteBuffers(1, &_vertexPositionBuffer);
     glDeleteVertexArrays(1, &_screenQuad);
 
-    OsEng.renderEngine().raycasterManager().removeListener(*this);
-    OsEng.renderEngine().deferredcasterManager().removeListener(*this);
+    global::raycasterManager.removeListener(*this);
+    global::deferredcasterManager.removeListener(*this);
 }
 
 void FramebufferRenderer::raycastersChanged(VolumeRaycaster&,
@@ -294,11 +298,11 @@ void FramebufferRenderer::update() {
     if (_resolveProgram->isDirty()) {
         _resolveProgram->rebuildFromFile();
 
-        _uniformCache.mainColorTexture = _resolveProgram->uniformLocation(
-            "mainColorTexture"
+        ghoul::opengl::updateUniformLocations(
+            *_resolveProgram,
+            _uniformCache,
+            UniformNames
         );
-        _uniformCache.blackoutFactor = _resolveProgram->uniformLocation("blackoutFactor");
-        _uniformCache.nAaSamples = _resolveProgram->uniformLocation("nAaSamples");
     }
 
     using K = VolumeRaycaster*;
@@ -359,8 +363,8 @@ void FramebufferRenderer::updateResolution() {
         GL_TEXTURE_2D_MULTISAMPLE,
         _nAaSamples,
         GL_RGBA,
-        GLsizei(_resolution.x),
-        GLsizei(_resolution.y),
+        _resolution.x,
+        _resolution.y,
         true
     );
 
@@ -371,8 +375,8 @@ void FramebufferRenderer::updateResolution() {
         GL_TEXTURE_2D,
         0,
         GL_RGBA32F,
-        GLsizei(_resolution.x),
-        GLsizei(_resolution.y),
+        _resolution.x,
+        _resolution.y,
         0,
         GL_RGBA,
         GL_FLOAT,
@@ -388,8 +392,8 @@ void FramebufferRenderer::updateResolution() {
         GL_TEXTURE_2D_MULTISAMPLE,
         _nAaSamples,
         GL_RGBA32F,
-        GLsizei(_resolution.x),
-        GLsizei(_resolution.y),
+        _resolution.x,
+        _resolution.y,
         true
     );
 
@@ -399,8 +403,8 @@ void FramebufferRenderer::updateResolution() {
         GL_TEXTURE_2D_MULTISAMPLE,
         _nAaSamples,
         GL_RGBA32F,
-        GLsizei(_resolution.x),
-        GLsizei(_resolution.y),
+        _resolution.x,
+        _resolution.y,
         true
     );
 
@@ -409,8 +413,8 @@ void FramebufferRenderer::updateResolution() {
         GL_TEXTURE_2D_MULTISAMPLE,
         _nAaSamples,
         GL_DEPTH_COMPONENT32F,
-        GLsizei(_resolution.x),
-        GLsizei(_resolution.y),
+        _resolution.x,
+        _resolution.y,
         true
     );
 
@@ -419,8 +423,8 @@ void FramebufferRenderer::updateResolution() {
         GL_TEXTURE_2D,
         0,
         GL_RGBA16,
-        GLsizei(_resolution.x),
-        GLsizei(_resolution.y),
+        _resolution.x,
+        _resolution.y,
         0,
         GL_RGBA,
         GL_UNSIGNED_SHORT,
@@ -436,8 +440,8 @@ void FramebufferRenderer::updateResolution() {
         GL_TEXTURE_2D,
         0,
         GL_DEPTH_COMPONENT32F,
-        GLsizei(_resolution.x),
-        GLsizei(_resolution.y),
+        _resolution.x,
+        _resolution.y,
         0,
         GL_DEPTH_COMPONENT,
         GL_FLOAT,
@@ -457,7 +461,8 @@ void FramebufferRenderer::updateRaycastData() {
     _insideRaycastPrograms.clear();
 
     const std::vector<VolumeRaycaster*>& raycasters =
-        OsEng.renderEngine().raycasterManager().raycasters();
+        global::raycasterManager.raycasters();
+
     int nextId = 0;
     for (VolumeRaycaster* raycaster : raycasters) {
         RaycastData data = { nextId++, "Helper" };
@@ -526,7 +531,7 @@ void FramebufferRenderer::updateDeferredcastData() {
     _deferredcastPrograms.clear();
 
     const std::vector<Deferredcaster*>& deferredcasters =
-        OsEng.renderEngine().deferredcasterManager().deferredcasters();
+        global::deferredcasterManager.deferredcasters();
     int nextId = 0;
     for (Deferredcaster* caster : deferredcasters) {
         DeferredcastData data = { nextId++, "HELPER" };
@@ -904,14 +909,13 @@ void FramebufferRenderer::updateMSAASamplingPattern() {
     _dirtyMsaaSamplingPattern = false;
 }
 
-void FramebufferRenderer::render(Scene* scene, Camera* camera, float blackoutFactor,
-                                 bool doPerformanceMeasurements)
-{
+void FramebufferRenderer::render(Scene* scene, Camera* camera, float blackoutFactor) {
+    const bool doPerformanceMeasurements = global::performanceManager.isEnabled();
+
     std::unique_ptr<performance::PerformanceMeasurement> perf;
     if (doPerformanceMeasurements) {
         perf = std::make_unique<performance::PerformanceMeasurement>(
-            "FramebufferRenderer::render",
-            OsEng.renderEngine().performanceManager()
+            "FramebufferRenderer::render"
         );
     }
 
@@ -942,7 +946,7 @@ void FramebufferRenderer::render(Scene* scene, Camera* camera, float blackoutFac
     glDisablei(GL_BLEND, 2);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    Time time = OsEng.timeManager().time();
+    Time time = global::timeManager.time();
 
     RenderData data = {
         *camera,
@@ -967,8 +971,7 @@ void FramebufferRenderer::render(Scene* scene, Camera* camera, float blackoutFac
         std::unique_ptr<performance::PerformanceMeasurement> perfInternal;
         if (doPerformanceMeasurements) {
             perfInternal = std::make_unique<performance::PerformanceMeasurement>(
-                "FramebufferRenderer::render::raycasterTasks",
-                OsEng.renderEngine().performanceManager()
+                "FramebufferRenderer::render::raycasterTasks"
             );
         }
         performRaycasterTasks(tasks.raycasterTasks);
@@ -982,8 +985,7 @@ void FramebufferRenderer::render(Scene* scene, Camera* camera, float blackoutFac
         std::unique_ptr<performance::PerformanceMeasurement> perfInternal;
         if (doPerformanceMeasurements) {
             perfInternal = std::make_unique<performance::PerformanceMeasurement>(
-                "FramebufferRenderer::render::deferredTasks",
-                OsEng.renderEngine().performanceManager()
+                "FramebufferRenderer::render::deferredTasks"
             );
         }
         performDeferredTasks(tasks.deferredcasterTasks);
@@ -1072,7 +1074,7 @@ void FramebufferRenderer::performRaycasterTasks(const std::vector<RaycasterTask>
             raycastProgram->setUniform("mainDepthTexture", mainDepthTextureUnit);
 
             raycastProgram->setUniform("nAaSamples", _nAaSamples);
-            raycastProgram->setUniform("windowSize", _resolution);
+            raycastProgram->setUniform("windowSize", static_cast<glm::vec2>(_resolution));
 
             glDisable(GL_DEPTH_TEST);
             glDepthMask(false);
@@ -1236,7 +1238,7 @@ void FramebufferRenderer::updateRendererData() {
     ghoul::Dictionary dict;
     dict.setValue("fragmentRendererPath", std::string(RenderFragmentShaderPath));
     _rendererData = dict;
-    OsEng.renderEngine().setRendererData(dict);
+    global::renderEngine.setRendererData(dict);
 }
 
 } // namespace openspace

@@ -22,17 +22,38 @@
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                                         *
  ****************************************************************************************/
 
-#version __CONTEXT__
+#ifndef __OPENSPACE_MODULE_GLOBEBROWSING___DASHBOARDITEMGLOBELOCATION___H__
+#define __OPENSPACE_MODULE_GLOBEBROWSING___DASHBOARDITEMGLOBELOCATION___H__
 
-in vec2 in_position;
+#include <openspace/rendering/dashboarditem.h>
 
-uniform float height;
-uniform ivec2 res;
+#include <openspace/properties/stringproperty.h>
+#include <openspace/properties/scalar/floatproperty.h>
 
-uniform mat4 ortho;
+namespace ghoul::fontrendering { class Font; }
 
-void main() {
-    float y = float(res.y) - in_position.y * height * res.y;
+namespace openspace {
 
-    gl_Position = ortho * vec4(in_position.x * res.x, y, 0.0, 1.0);
-}
+namespace documentation { struct Documentation; }
+
+class DashboardItemGlobeLocation : public DashboardItem {
+public:
+    DashboardItemGlobeLocation(const ghoul::Dictionary& dictionary);
+    ~DashboardItemGlobeLocation() = default;
+
+    void render(glm::vec2& penPosition) override;
+
+    glm::vec2 size() const override;
+
+    static documentation::Documentation Documentation();
+
+private:
+    properties::StringProperty _fontName;
+    properties::FloatProperty _fontSize;
+
+    std::shared_ptr<ghoul::fontrendering::Font> _font;
+};
+
+} // namespace openspace
+
+#endif // __OPENSPACE_MODULE_GLOBEBROWSING___DASHBOARDITEMGLOBELOCATION___H__

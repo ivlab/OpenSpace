@@ -22,6 +22,10 @@
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                                         *
  ****************************************************************************************/
 
+#include <openspace/engine/downloadmanager.h>
+#include <openspace/engine/globals.h>
+#include <openspace/properties/triggerproperty.h>
+#include <openspace/rendering/renderengine.h>
 #include <openspace/scene/scenegraphnode.h>
 
 namespace openspace::luascriptfunctions {
@@ -35,7 +39,7 @@ namespace openspace::luascriptfunctions {
 int toggleShutdown(lua_State* L) {
     ghoul::lua::checkArgumentsAndThrow(L, 0, "lua::toggleShutdown");
 
-    OsEng.toggleShutdownMode();
+    global::openSpaceEngine.toggleShutdownMode();
 
     ghoul_assert(lua_gettop(L) == 0, "Incorrect number of items left on stack");
     return 0;
@@ -49,8 +53,8 @@ int toggleShutdown(lua_State* L) {
 int writeDocumentation(lua_State* L) {
     ghoul::lua::checkArgumentsAndThrow(L, 0, "lua::writeDocumentation");
 
-    OsEng.writeStaticDocumentation();
-    OsEng.writeSceneDocumentation();
+    global::openSpaceEngine.writeStaticDocumentation();
+    global::openSpaceEngine.writeSceneDocumentation();
 
     ghoul_assert(lua_gettop(L) == 0, "Incorrect number of items left on stack");
     return 0;
@@ -73,7 +77,11 @@ int addVirtualProperty(lua_State* L) {
     if (type == "BoolProperty") {
         const bool v = ghoul::lua::value<bool>(L, 5);
         prop = std::make_unique<properties::BoolProperty>(
-            properties::Property::PropertyInfo{ identifier.c_str(), name.c_str(), description.c_str() },
+            properties::Property::PropertyInfo {
+                identifier.c_str(),
+                name.c_str(),
+                description.c_str()
+            },
             v
         );
     }
@@ -83,7 +91,11 @@ int addVirtualProperty(lua_State* L) {
         const int max = ghoul::lua::value<int>(L, 7);
 
         prop = std::make_unique<properties::IntProperty>(
-            properties::Property::PropertyInfo{ identifier.c_str(), name.c_str(), description.c_str() },
+            properties::Property::PropertyInfo {
+                identifier.c_str(),
+                name.c_str(),
+                description.c_str()
+            },
             v,
             min,
             max
@@ -95,7 +107,11 @@ int addVirtualProperty(lua_State* L) {
         const float max = ghoul::lua::value<float>(L, 7);
 
         prop = std::make_unique<properties::FloatProperty>(
-            properties::Property::PropertyInfo{ identifier.c_str(), name.c_str(), description.c_str() },
+            properties::Property::PropertyInfo {
+                identifier.c_str(),
+                name.c_str(),
+                description.c_str()
+            },
             v,
             min,
             max
@@ -103,7 +119,11 @@ int addVirtualProperty(lua_State* L) {
     }
     else if (type == "TriggerProperty") {
         prop = std::make_unique<properties::TriggerProperty>(
-            properties::Property::PropertyInfo{ identifier.c_str(), name.c_str(), description.c_str() }
+            properties::Property::PropertyInfo {
+                identifier.c_str(),
+                name.c_str(),
+                description.c_str()
+            }
         );
     }
     else {
@@ -112,7 +132,7 @@ int addVirtualProperty(lua_State* L) {
     }
 
     lua_settop(L, 0);
-    OsEng.virtualPropertyManager().addProperty(std::move(prop));
+    global::virtualPropertyManager.addProperty(std::move(prop));
 
     ghoul_assert(lua_gettop(L) == 0, "Incorrect number of items left on stack");
     return 0;
@@ -127,9 +147,9 @@ int removeVirtualProperty(lua_State* L) {
     ghoul::lua::checkArgumentsAndThrow(L, 1, "lua::removeVirtualProperty");
 
     const std::string& name = ghoul::lua::value<std::string>(L, 1);
-    properties::Property* p = OsEng.virtualPropertyManager().property(name);
+    properties::Property* p = global::virtualPropertyManager.property(name);
     if (p) {
-        OsEng.virtualPropertyManager().removeProperty(p);
+        global::virtualPropertyManager.removeProperty(p);
     }
     else {
         LWARNINGC(
@@ -152,9 +172,9 @@ int removeAllVirtualProperties(lua_State* L) {
     ghoul::lua::checkArgumentsAndThrow(L, 0, "lua::removeAllVirtualProperties");
 
     const std::vector<properties::Property*>& ps =
-        OsEng.virtualPropertyManager().properties();
+        global::virtualPropertyManager.properties();
     for (properties::Property* p : ps) {
-        OsEng.virtualPropertyManager().removeProperty(p);
+        global::virtualPropertyManager.removeProperty(p);
         delete p;
     }
 
@@ -174,7 +194,7 @@ int addTag(lua_State* L) {
     std::string tag = ghoul::lua::value<std::string>(L, 2);
     lua_settop(L, 0);
 
-    SceneGraphNode* node = OsEng.renderEngine().scene()->sceneGraphNode(uri);
+    SceneGraphNode* node = global::renderEngine.scene()->sceneGraphNode(uri);
     if (!node) {
         return ghoul::lua::luaError(
             L,
@@ -200,7 +220,7 @@ int removeTag(lua_State* L) {
     const std::string& tag = ghoul::lua::value<std::string>(L, 2);
     lua_settop(L, 0);
 
-    SceneGraphNode* node = OsEng.renderEngine().scene()->sceneGraphNode(uri);
+    SceneGraphNode* node = global::renderEngine.scene()->sceneGraphNode(uri);
     if (!node) {
         return ghoul::lua::luaError(
             L,
@@ -227,14 +247,14 @@ int downloadFile(lua_State* L) {
     lua_settop(L, 0);
 
     LINFOC("OpenSpaceEngine", fmt::format("Downloading file from {}", uri));
-    DownloadManager dm = DownloadManager(DownloadManager::UseMultipleThreads::No);
-    std::shared_ptr<DownloadManager::FileFuture> future = dm.downloadFile(
-        uri,
-        savePath,
-        DownloadManager::OverrideFile::Yes,
-        DownloadManager::FailOnError::Yes,
-        5
-    );
+    std::shared_ptr<DownloadManager::FileFuture> future =
+        global::downloadManager.downloadFile(
+            uri,
+            savePath,
+            DownloadManager::OverrideFile::Yes,
+            DownloadManager::FailOnError::Yes,
+            5
+        );
     if (!future || (future && !future->isFinished)) {
         return ghoul::lua::luaError(
             L,
@@ -244,6 +264,18 @@ int downloadFile(lua_State* L) {
 
     ghoul_assert(lua_gettop(L) == 0, "Incorrect number of items left on stack");
     return 0;
+}
+
+int isMaster(lua_State* L) {
+    ghoul::lua::checkArgumentsAndThrow(L, 0, "lua::isMaster");
+    ghoul::lua::push(L, global::windowDelegate.isMaster());
+    return 1;
+}
+
+int clusterId(lua_State* L) {
+    ghoul::lua::checkArgumentsAndThrow(L, 0, "lua::clusterId");
+    ghoul::lua::push(L, global::windowDelegate.clusterId());
+    return 1;
 }
 
 } // namespace openspace::luascriptfunctions

@@ -84,8 +84,8 @@ namespace openspace {
         properties::BoolProperty _enabled;
 
         std::unique_ptr<ghoul::opengl::ProgramObject> _shader;
-        UniformCache(modelViewProjection, textureOffset, transparency, nightFactor,
-            sunPosition, texture) _uniformCache;
+        UniformCache(modelViewMatrix, projectionMatrix, textureOffset, 
+            transparency, nightFactor, sunPosition, texture) _uniformCache;
         std::unique_ptr<ghoul::opengl::Texture> _texture;
         std::unique_ptr<ghoul::filesystem::File> _textureFile;
 

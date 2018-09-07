@@ -26,9 +26,8 @@
 #include "fragment.glsl"
 
 in vec2 vs_st;
-in vec4 vs_position;
-//in vec4 vs_gPosition;
-//in vec3 vs_gNormal;
+in float vs_screenSpaceDepth;
+in vec4 vs_positionViewSpace;
 
 uniform sampler1D texture1;
 uniform vec2 textureOffset;
@@ -86,11 +85,14 @@ Fragment getFragment() {
     }
 
     Fragment frag;
-    frag.color = diffuse;
-    frag.depth = vs_position.w;
-
-    //frag.gPosition  = vs_gPosition;
-    //frag.gNormal    = vs_gNormal;
+    frag.color      = diffuse;
+    //frag.depth      = vs_position.w;
+    frag.depth      = vs_screenSpaceDepth;
+    if (diffuse.a < 1.0)
+        frag.gPosition = vec4(1e30, 1e30, 1e30, 1.0);
+    else
+        frag.gPosition  = vs_positionViewSpace;
+    frag.gNormal    = vec4(normal, 1.0);
 
     return frag;
 }

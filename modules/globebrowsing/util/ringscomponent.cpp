@@ -56,9 +56,9 @@
 #include <locale>
 
 namespace {
-    constexpr const std::array<const char*, 6> UniformNames = {
-        "modelViewProjectionTransform", "textureOffset", "transparency", "_nightFactor",
-        "sunPosition", "texture1"
+    constexpr const std::array<const char*, 7> UniformNames = {
+        "modelViewMatrix", "projectionMatrix", "textureOffset", 
+        "transparency", "_nightFactor", "sunPosition", "texture1"
     };
 
     constexpr openspace::properties::Property::PropertyInfo TextureInfo = {
@@ -247,10 +247,12 @@ namespace openspace {
 
         glm::dmat4 modelViewTransform = data.camera.combinedViewMatrix() * modelTransform;
 
-        _shader->setUniform(
+        /*_shader->setUniform(
             _uniformCache.modelViewProjection,
             data.camera.projectionMatrix() * glm::mat4(modelViewTransform)
-        );
+        );*/
+        _shader->setUniform(_uniformCache.modelViewMatrix, modelViewTransform);
+        _shader->setUniform(_uniformCache.projectionMatrix, glm::dmat4(data.camera.projectionMatrix()));
         _shader->setUniform(_uniformCache.textureOffset, _offset);
         _shader->setUniform(_uniformCache.transparency, _transparency);
 

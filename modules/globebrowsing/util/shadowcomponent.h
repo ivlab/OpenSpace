@@ -33,10 +33,14 @@
 #include <openspace/properties/vector/vec2property.h>
 #include <openspace/properties/vector/vec4property.h>
 #include <openspace/properties/stringproperty.h>
+#include <openspace/properties/triggerproperty.h>
 
 #include <ghoul/glm.h>
 #include <ghoul/opengl/texture.h>
 #include <ghoul/opengl/uniformcache.h>
+
+#include <string>
+#include <sstream>
 
 namespace ghoul {
     class Dictionary;
@@ -79,8 +83,14 @@ namespace openspace {
 
         // Debug
         void saveDepthBuffer();
+        void checkGLError(const std::string & where) const;
 
     private:
+
+        // DEBUG
+        properties::TriggerProperty _saveDepthTexture;
+        properties::IntProperty _divideExponent;
+        
         std::unique_ptr<ghoul::opengl::ProgramObject> _shaderProgram;
         
         ghoul::Dictionary _shadowMapDictionary;
@@ -99,8 +109,12 @@ namespace openspace {
         GLint _mViewport[4];
 
         GLboolean _faceCulling;
-        
-        GLenum _faceToCull;
+        GLboolean _polygonOffSet;
+
+        GLenum _faceToCull;        
+
+        GLfloat _polygonOffSetFactor;
+        GLfloat _polygonOffSetUnits;
 
         glm::vec3 _sunPosition;
 
@@ -108,6 +122,12 @@ namespace openspace {
 
         glm::dvec3 _cameraPos;
         glm::dvec3 _cameraFocus;
+        glm::dquat _cameraRotation;
+
+        std::stringstream _serializedCamera;
+
+        // DEBUG
+        bool _executeDepthTextureSave;
         
     };
 

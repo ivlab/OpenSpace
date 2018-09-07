@@ -100,6 +100,12 @@ namespace {
         "This value determines the transparency of part of the rings depending on the "
         "color values. For this value v, the transparency is equal to length(color) / v."
     };
+
+    constexpr openspace::properties::Property::PropertyInfo SaveDepthTextureInfo = {
+        "SaveDepthTextureInfo",
+        "Save Depth Texture",
+        "Debug"
+    };
 } // namespace
 
 namespace openspace {
@@ -146,9 +152,11 @@ namespace openspace {
 
     ShadowComponent::ShadowComponent(const ghoul::Dictionary& dictionary)
         : properties::PropertyOwner({ "Shadows" })		
+        , _saveDepthTexture(SaveDepthTextureInfo)
+        , _divideExponent(SizeInfo, 1, 1, 100)
         , _shadowMapDictionary(dictionary)
-        , _shadowDepthTextureHeight(2048)
-        , _shadowDepthTextureWidth(2048)
+        , _shadowDepthTextureHeight(1024)
+        , _shadowDepthTextureWidth(1024)
         , _shadowDepthTexture(-1)
         , _shadowFBO(-1)
         , _firstPassSubroutine(-1)
@@ -156,7 +164,7 @@ namespace openspace {
         , _defaultFBO(-1)
         , _sunPosition(0.0)
         , _shadowMatrix(1.0)
-
+        , _executeDepthTextureSave(false)
     {
         using ghoul::filesystem::File;
 
@@ -169,6 +177,13 @@ namespace openspace {
             _shadowMapDictionary,
             "ShadowComponent"
         );
+
+        _saveDepthTexture.onChange([&]() {
+            _executeDepthTextureSave = true;
+        });
+
+        addProperty(_saveDepthTexture);
+        addProperty(_divideExponent);
     }
 
     void ShadowComponent::initialize()
@@ -238,10 +253,19 @@ namespace openspace {
         lightViewMatrix = lightViewMatrix * glm::translate(glm::dmat4(1.0), -lightPosition);*/
 
         // Camera matrix
+        double lightDistance = glm::length(
+            data.modelTransform.translation - glm::dvec3(_sunPosition)
+        );
+        glm::dvec3 lightDirection = glm::normalize(
+            data.modelTransform.translation - glm::dvec3(_sunPosition)
+        );
+        glm::dvec3 lightPosition = lightDirection * (lightDirection * pow(1.0, -_divideExponent));
         glm::dmat4 lightViewMatrix = glm::lookAt(
-            glm::dvec3(_sunPosition), // position
+            lightPosition,
+            //glm::dvec3(_sunPosition), // position
             glm::dvec3(data.modelTransform.translation), // looks at 
-            data.camera.lookUpVectorWorldSpace()  // up
+            //data.camera.lookUpVectorWorldSpace()  // up
+            glm::dvec3(0.0, 1.0, 0.0)
         );
 
         glm::dmat4 lightProjectionMatrix = glm::perspective(
@@ -261,27 +285,44 @@ namespace openspace {
         _shaderProgram->setUniform(_uniformCache.shadowMap, _shadowDepthTexture);*/
 
 
-        /*_cameraPos = data.camera.eyePositionVec3();
+        _cameraPos = data.camera.eyePositionVec3();
         _cameraFocus = data.camera.focusPositionVec3();
-
-        Camera *camera = OsEng.renderEngine().camera();
-        camera->setPositionVec3(glm::dvec3(_sunPosition));
-        camera->setFocusPositionVec3(data.modelTransform.translation);*/
+        _cameraRotation = data.camera.rotationQuaternion();
+        
+        Camera *camera = global::renderEngine.camera();
+        camera->setPositionVec3(lightPosition);
+        //camera->setPositionVec3(glm::dvec3(_sunPosition));
+        camera->setFocusPositionVec3(data.modelTransform.translation);
+        camera->setRotation(glm::dquat(glm::inverse(lightViewMatrix)));
         
         // Saves current state
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &_defaultFBO);
         glGetIntegerv(GL_VIEWPORT, _mViewport);
         _faceCulling = glIsEnabled(GL_CULL_FACE);
         glGetIntegerv(GL_CULL_FACE_MODE, &_faceToCull);
+        _polygonOffSet = glIsEnabled(GL_POLYGON_OFFSET_FILL);
+        glGetFloatv(GL_POLYGON_OFFSET_FACTOR, &_polygonOffSetFactor);
+        glGetFloatv(GL_POLYGON_OFFSET_UNITS, &_polygonOffSetUnits);
 
+        checkGLError("begin() -- before binding FBO");
         glBindFramebuffer(GL_FRAMEBUFFER, _shadowFBO);
+        checkGLError("begin() -- after binding FBO");
         glClear(GL_DEPTH_BUFFER_BIT);
+        checkGLError("begin() -- after cleanning Depth buffer");
         glViewport(0, 0, _shadowDepthTextureWidth, _shadowDepthTextureHeight);
-        glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &_firstPassSubroutine);
+        checkGLError("begin() -- set new viewport");
+        //glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &_firstPassSubroutine);
+        //checkGLError("begin() -- got firstPassSubroutine");
         glEnable(GL_CULL_FACE);
+        checkGLError("begin() -- enabled cull face");
         glCullFace(GL_FRONT);
+        checkGLError("begin() -- set cullface to front");
         glEnable(GL_POLYGON_OFFSET_FILL);
+        checkGLError("begin() -- enabled polygon offset fill");
         glPolygonOffset(2.5f, 10.0f);
+        checkGLError("begin() -- set values for polygon offset");
+
+        checkGLError("begin() finished");
         
     }
 
@@ -289,12 +330,16 @@ namespace openspace {
         //_shaderProgram->deactivate();
            
         glFlush();
-        saveDepthBuffer();
+        if (_executeDepthTextureSave) {
+            saveDepthBuffer();
+            _executeDepthTextureSave = false;
+        }
 
-        /*Camera *camera = OsEng.renderEngine().camera();
+        Camera *camera = global::renderEngine.camera();
         camera->setPositionVec3(_cameraPos);
         camera->setFocusPositionVec3(_cameraFocus);
-*/
+        camera->setRotation(_cameraRotation);
+        
         // Restores system state
         glBindFramebuffer(GL_FRAMEBUFFER, _defaultFBO);
         glViewport(
@@ -303,6 +348,7 @@ namespace openspace {
             _mViewport[2],
             _mViewport[3]
         );
+        
         if (_faceCulling) {
             glEnable(GL_CULL_FACE);
             glCullFace(_faceToCull);
@@ -310,6 +356,16 @@ namespace openspace {
         else {
             glDisable(GL_CULL_FACE);
         }
+
+        if (_polygonOffSet) {
+            glEnable(GL_POLYGON_OFFSET_FILL);
+            glPolygonOffset(_polygonOffSetFactor, _polygonOffSetUnits);
+        }
+        else {
+            glDisable(GL_POLYGON_OFFSET_FILL);
+        }
+
+        checkGLError("end() finished");
     }
 
     void ShadowComponent::update(const UpdateData& data) {
@@ -322,13 +378,24 @@ namespace openspace {
     void ShadowComponent::createDepthTexture() {
         glGenTextures(1, &_shadowDepthTexture);
         glBindTexture(GL_TEXTURE_2D, _shadowDepthTexture);
-        glTexStorage2D(
+        /*glTexStorage2D(
             GL_TEXTURE_2D, 
             1, 
             GL_DEPTH_COMPONENT32F,
             _shadowDepthTextureWidth, 
             _shadowDepthTextureHeight
-        );
+        );*/
+
+        glTexImage2D(GL_TEXTURE_2D,
+                     0,
+                     GL_DEPTH_COMPONENT,
+                     _shadowDepthTextureWidth,
+                     _shadowDepthTextureHeight,
+                     0,
+                     GL_DEPTH_COMPONENT,
+                     GL_FLOAT,
+                     nullptr);
+
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
@@ -336,6 +403,7 @@ namespace openspace {
         glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, shadowBorder);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
+        checkGLError("createdDepthTexture");
     }
 
     void ShadowComponent::createShadowFBO() {
@@ -365,14 +433,24 @@ namespace openspace {
             _mViewport[2],
             _mViewport[3]
         );*/
+        checkGLError("createdShadowFBO");
     }
 
     void ShadowComponent::saveDepthBuffer() {
         int size = _shadowDepthTextureWidth * _shadowDepthTextureHeight;
         float * buffer = new float[size];
-
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, buffer);
-        
+        //unsigned char * buffer = new unsigned char[size];
+        //glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, buffer);
+        glReadPixels(
+            0,
+            0,
+            _shadowDepthTextureWidth,
+            _shadowDepthTextureHeight,
+            GL_DEPTH_COMPONENT,
+            GL_FLOAT,
+            buffer
+        );
+        checkGLError("readDepthBuffer To buffer");
         std::fstream ppmFile;
 
         ppmFile.open("depthBufferShadowMapping.ppm", std::fstream::out);
@@ -382,22 +460,70 @@ namespace openspace {
             ppmFile << _shadowDepthTextureWidth << " " << _shadowDepthTextureHeight << std::endl;
             ppmFile << "255" << std::endl;
 
-            std::cout << "\n\nFILE\n\n";
-
-            for (int i = 0; i < _shadowDepthTextureHeight; i++) {
-                for (int j = 0; j < _shadowDepthTextureWidth; j++) {
-                    int bufIdx = ((_shadowDepthTextureHeight - i - 1) * _shadowDepthTextureWidth) + j;
-
-                    float minVal = 0.88f;
-                    float scale = (buffer[bufIdx] - minVal) / (1.0f - minVal);
-                    unsigned char val = (unsigned char)(scale * 255);
-                    ppmFile << val << " " << val << " " << val;
+            std::cout << "\n\nTexture saved to file depthBufferShadowMapping.ppm\n\n";
+            const float minVal = 0.88f;
+            int k = 0;
+            for (int i = 0; i < _shadowDepthTextureWidth; i++) {
+                for (int j = 0; j < _shadowDepthTextureHeight; j++, k++) {
+                    float scale = (static_cast<float>(buffer[k]) - minVal) / (1.0f - minVal);
+                    unsigned int val = static_cast<unsigned int>((scale * 255));
+                    ppmFile << val << " "
+                        << val << " "
+                        << val << " ";
                 }
                 ppmFile << std::endl;
             }
+
             ppmFile.close();
-        }
+        }        
 
         delete[] buffer;
+    }
+
+    void ShadowComponent::checkGLError(const std::string & where) const {
+        const GLenum error = glGetError();
+        switch (error) {
+        case GL_NO_ERROR:
+            break;
+        case GL_INVALID_ENUM:
+            LERRORC(
+                "OpenGL Invalid State",
+                fmt::format("Function {}: GL_INVALID_ENUM", where)
+            );
+            break;
+        case GL_INVALID_VALUE:
+            LERRORC(
+                "OpenGL Invalid State",
+                fmt::format("Function {}: GL_INVALID_VALUE", where)
+            );
+            break;
+        case GL_INVALID_OPERATION:
+            LERRORC(
+                "OpenGL Invalid State",
+                fmt::format(
+                    "Function {}: GL_INVALID_OPERATION", where
+                ));
+            break;
+        case GL_INVALID_FRAMEBUFFER_OPERATION:
+            LERRORC(
+                "OpenGL Invalid State",
+                fmt::format(
+                    "Function {}: GL_INVALID_FRAMEBUFFER_OPERATION",
+                    where
+                )
+            );
+            break;
+        case GL_OUT_OF_MEMORY:
+            LERRORC(
+                "OpenGL Invalid State",
+                fmt::format("Function {}: GL_OUT_OF_MEMORY", where)
+            );
+            break;
+        default:
+            LERRORC(
+                "OpenGL Invalid State",
+                fmt::format("Unknown error code: {0:x}", static_cast<int>(error))
+            );
+        }
     }
 } // namespace openspace

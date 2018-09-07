@@ -367,6 +367,9 @@ RenderableGlobe::RenderableGlobe(const ghoul::Dictionary& dictionary)
         addPropertySubOwner(_ringsComponent);
         _hasRings = true;
     }
+
+    // DEBUG TODO JCC
+    addPropertySubOwner(_shadowComponent);
 }
 
 void RenderableGlobe::initializeGL() {

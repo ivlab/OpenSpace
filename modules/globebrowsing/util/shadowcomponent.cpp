@@ -256,14 +256,20 @@ namespace openspace {
         double lightDistance = glm::length(
             data.modelTransform.translation - glm::dvec3(_sunPosition)
         );
+        std::cout << "== light Distance: " << lightDistance << std::endl;
         glm::dvec3 lightDirection = glm::normalize(
             data.modelTransform.translation - glm::dvec3(_sunPosition)
         );
-        glm::dvec3 lightPosition = lightDirection * (lightDirection * pow(1.0, -_divideExponent));
+        std::cout << "** light Direction: " << lightDirection << std::endl;
+        double divider = pow(10.0, -_divideExponent);
+        glm::dvec3 lightPosition = lightDirection * (lightDistance * divider);
+
+        std::cout << "-- Sun Position: " << _sunPosition << ", light Position: " << lightPosition << std::endl;
+
         glm::dmat4 lightViewMatrix = glm::lookAt(
             lightPosition,
             //glm::dvec3(_sunPosition), // position
-            glm::dvec3(data.modelTransform.translation), // looks at 
+            glm::dvec3(data.modelTransform.translation), // focus 
             //data.camera.lookUpVectorWorldSpace()  // up
             glm::dvec3(0.0, 1.0, 0.0)
         );
@@ -285,7 +291,7 @@ namespace openspace {
         _shaderProgram->setUniform(_uniformCache.shadowMap, _shadowDepthTexture);*/
 
 
-        _cameraPos = data.camera.eyePositionVec3();
+        _cameraPos = data.camera.positionVec3();
         _cameraFocus = data.camera.focusPositionVec3();
         _cameraRotation = data.camera.rotationQuaternion();
         

@@ -153,7 +153,7 @@ namespace openspace {
     ShadowComponent::ShadowComponent(const ghoul::Dictionary& dictionary)
         : properties::PropertyOwner({ "Shadows" })		
         , _saveDepthTexture(SaveDepthTextureInfo)
-        , _divideExponent(SizeInfo, 1, 1, 100)
+        , _divideExponent(SizeInfo, 1, 1, 1000)
         , _shadowMapDictionary(dictionary)
         , _shadowDepthTextureHeight(1024)
         , _shadowDepthTextureWidth(1024)
@@ -253,19 +253,17 @@ namespace openspace {
         lightViewMatrix = lightViewMatrix * glm::translate(glm::dmat4(1.0), -lightPosition);*/
 
         // Camera matrix
-        double lightDistance = glm::length(
-            data.modelTransform.translation - glm::dvec3(_sunPosition)
-        );
-        std::cout << "== light Distance: " << lightDistance << std::endl;
-        glm::dvec3 lightDirection = glm::normalize(
-            data.modelTransform.translation - glm::dvec3(_sunPosition)
-        );
-        std::cout << "** light Direction: " << lightDirection << std::endl;
-        double divider = pow(10.0, -_divideExponent);
-        glm::dvec3 lightPosition = lightDirection * (lightDistance * divider);
-
-        std::cout << "-- Sun Position: " << _sunPosition << ", light Position: " << lightPosition << std::endl;
-
+        glm::dvec3 diffVector = glm::dvec3(_sunPosition) - data.modelTransform.translation;
+        double originalLightDistance = glm::length(diffVector);
+        glm::dvec3 lightDirection = glm::normalize(diffVector);
+        
+        // Percentage of the original light source distance
+        double multiplier = originalLightDistance * (static_cast<double>(_divideExponent)/1000.0);
+        
+        // New light source position
+        glm::dvec3 lightPosition = data.modelTransform.translation + (lightDirection * multiplier);
+       
+        // Light view matrix
         glm::dmat4 lightViewMatrix = glm::lookAt(
             lightPosition,
             //glm::dvec3(_sunPosition), // position
@@ -274,15 +272,15 @@ namespace openspace {
             glm::dvec3(0.0, 1.0, 0.0)
         );
 
-        glm::dmat4 lightProjectionMatrix = glm::perspective(
+        /*glm::dmat4 lightProjectionMatrix = glm::perspective(
             glm::radians(45.0f),
             static_cast<float>(_shadowDepthTextureWidth) / static_cast<float>(_shadowDepthTextureHeight),
             0.1f,
             100.0f
-        );
+        );*/
 
-        glm::dmat4 lightModelViewProjectionMatrix = lightProjectionMatrix * lightViewMatrix *
-            glm::translate(glm::dmat4(1.0), -glm::dvec3(_sunPosition));
+        /*glm::dmat4 lightModelViewProjectionMatrix = lightProjectionMatrix * lightViewMatrix *
+            glm::translate(glm::dmat4(1.0), -glm::dvec3(_sunPosition));*/
 
         /*_shadowMatrix = toTextureCoordsMatrix * lightModelViewProjectionMatrix;
 
@@ -300,6 +298,8 @@ namespace openspace {
         //camera->setPositionVec3(glm::dvec3(_sunPosition));
         camera->setFocusPositionVec3(data.modelTransform.translation);
         camera->setRotation(glm::dquat(glm::inverse(lightViewMatrix)));
+        // Forcing cache cleanning
+        camera->combinedViewMatrix();
         
         // Saves current state
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &_defaultFBO);
@@ -375,10 +375,7 @@ namespace openspace {
     }
 
     void ShadowComponent::update(const UpdateData& data) {
-        _sunPosition = glm::normalize(
-            global::renderEngine.scene()->sceneGraphNode("Sun")->worldPosition() -
-            data.modelTransform.translation
-        );
+        _sunPosition = global::renderEngine.scene()->sceneGraphNode("Sun")->worldPosition();
     }
 
     void ShadowComponent::createDepthTexture() {
@@ -471,11 +468,14 @@ namespace openspace {
             int k = 0;
             for (int i = 0; i < _shadowDepthTextureWidth; i++) {
                 for (int j = 0; j < _shadowDepthTextureHeight; j++, k++) {
-                    float scale = (static_cast<float>(buffer[k]) - minVal) / (1.0f - minVal);
+                    /*float scale = (static_cast<float>(buffer[k]) - minVal) / (1.0f - minVal);
                     unsigned int val = static_cast<unsigned int>((scale * 255));
                     ppmFile << val << " "
                         << val << " "
-                        << val << " ";
+                        << val << " ";*/
+                    ppmFile << static_cast<unsigned int>(buffer[k] * 255.f) << " "
+                        << static_cast<unsigned int>(buffer[k] * 255.f) << " "
+                        << static_cast<unsigned int>(buffer[k] * 255.f) << " ";
                 }
                 ppmFile << std::endl;
             }

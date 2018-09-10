@@ -381,15 +381,15 @@ namespace openspace {
     void ShadowComponent::createDepthTexture() {
         glGenTextures(1, &_shadowDepthTexture);
         glBindTexture(GL_TEXTURE_2D, _shadowDepthTexture);
-        /*glTexStorage2D(
+        glTexStorage2D(
             GL_TEXTURE_2D, 
             1, 
             GL_DEPTH_COMPONENT32F,
             _shadowDepthTextureWidth, 
             _shadowDepthTextureHeight
-        );*/
+        );
 
-        glTexImage2D(GL_TEXTURE_2D,
+        /*glTexImage2D(GL_TEXTURE_2D,
                      0,
                      GL_DEPTH_COMPONENT,
                      _shadowDepthTextureWidth,
@@ -397,7 +397,7 @@ namespace openspace {
                      0,
                      GL_DEPTH_COMPONENT,
                      GL_FLOAT,
-                     nullptr);
+                     nullptr);*/
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -468,14 +468,9 @@ namespace openspace {
             int k = 0;
             for (int i = 0; i < _shadowDepthTextureWidth; i++) {
                 for (int j = 0; j < _shadowDepthTextureHeight; j++, k++) {
-                    /*float scale = (static_cast<float>(buffer[k]) - minVal) / (1.0f - minVal);
+                    float scale = (static_cast<float>(buffer[k]) - minVal) / (1.0f - minVal);
                     unsigned int val = static_cast<unsigned int>((scale * 255));
-                    ppmFile << val << " "
-                        << val << " "
-                        << val << " ";*/
-                    ppmFile << static_cast<unsigned int>(buffer[k] * 255.f) << " "
-                        << static_cast<unsigned int>(buffer[k] * 255.f) << " "
-                        << static_cast<unsigned int>(buffer[k] * 255.f) << " ";
+                    ppmFile << val << " " << val << " " << val << " ";
                 }
                 ppmFile << std::endl;
             }

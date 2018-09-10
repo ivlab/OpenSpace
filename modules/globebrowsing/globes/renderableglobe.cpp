@@ -448,11 +448,14 @@ void RenderableGlobe::render(const RenderData& data, RendererTasks& rendererTask
             if (_hasRings && _ringsComponent.isEnabled()) {
                 if (_shadowComponent.isEnabled()) {
                     _shadowComponent.begin(data);
+                    
                     _chunkedLodGlobe->render(data, rendererTask);
                     _ringsComponent.draw(data, RingsComponent::GeometryOnly);
+                    
                     _shadowComponent.end(data);
-                    _ringsComponent.draw(data, RingsComponent::GeometryAndShading);
+
                     _chunkedLodGlobe->render(data, rendererTask);
+                    _ringsComponent.draw(data, RingsComponent::GeometryAndShading);
                 }
                 else {
                     _chunkedLodGlobe->render(data, rendererTask);

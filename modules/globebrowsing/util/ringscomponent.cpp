@@ -61,6 +61,10 @@ namespace {
         "transparency", "_nightFactor", "sunPosition", "texture1"
     };
 
+    constexpr const std::array<const char*, 3> GeomUniformNames = {
+        "modelViewMatrix", "projectionMatrix", "textureOffset"
+    };
+
     constexpr openspace::properties::Property::PropertyInfo TextureInfo = {
         "Texture",
         "Texture",
@@ -204,7 +208,7 @@ namespace openspace {
     }
 
     bool RingsComponent::isReady() const {
-        return _shader && _texture;
+        return (_shader || _geometryOnlyShader) && _texture;
     }
 
     void RingsComponent::initializeGL() {
@@ -214,7 +218,18 @@ namespace openspace {
             absPath("${MODULE_GLOBEBROWSING}/shaders/rings_fs.glsl")
         );
 
+        _geometryOnlyShader = global::renderEngine.buildRenderProgram(
+            "RingsGeomOnlyProgram",
+            absPath("${MODULE_GLOBEBROWSING}/shaders/rings_vs.glsl"),
+            absPath("${MODULE_GLOBEBROWSING}/shaders/rings_geom_fs.glsl")
+        );
+
         ghoul::opengl::updateUniformLocations(*_shader, _uniformCache, UniformNames);
+        ghoul::opengl::updateUniformLocations(
+            *_geometryOnlyShader, 
+            _geomUniformCache, 
+            GeomUniformNames
+        );
 
         glGenVertexArrays(1, &_quad);
         glGenBuffers(1, &_vertexPositionBuffer);
@@ -235,11 +250,19 @@ namespace openspace {
 
         global::renderEngine.removeRenderProgram(_shader.get());
         _shader = nullptr;
+
+        global::renderEngine.removeRenderProgram(_geometryOnlyShader.get());
+        _geometryOnlyShader = nullptr;
     }
 
-    void RingsComponent::draw(const RenderData& data) {
-        _shader->activate();
-
+    void RingsComponent::draw(const RenderData& data, const RingsComponent::RenderPass renderPass) {
+        if (renderPass == GeometryAndShading) {
+            _shader->activate();
+        }
+        else if (renderPass == GeometryOnly) {
+            _geometryOnlyShader->activate();
+        }
+        
         glm::dmat4 modelTransform =
             glm::translate(glm::dmat4(1.0), data.modelTransform.translation) *
             glm::dmat4(data.modelTransform.rotation) *
@@ -247,22 +270,34 @@ namespace openspace {
 
         glm::dmat4 modelViewTransform = data.camera.combinedViewMatrix() * modelTransform;
 
-        /*_shader->setUniform(
-            _uniformCache.modelViewProjection,
-            data.camera.projectionMatrix() * glm::mat4(modelViewTransform)
-        );*/
-        _shader->setUniform(_uniformCache.modelViewMatrix, modelViewTransform);
-        _shader->setUniform(_uniformCache.projectionMatrix, glm::dmat4(data.camera.projectionMatrix()));
-        _shader->setUniform(_uniformCache.textureOffset, _offset);
-        _shader->setUniform(_uniformCache.transparency, _transparency);
-
-        _shader->setUniform(_uniformCache.nightFactor, _nightFactor);
-        _shader->setUniform(_uniformCache.sunPosition, _sunPosition);
-
         ghoul::opengl::TextureUnit unit;
-        unit.activate();
-        _texture->bind();
-        _shader->setUniform(_uniformCache.texture, unit);
+        if (renderPass == GeometryAndShading) {
+            _shader->setUniform(_uniformCache.modelViewMatrix, modelViewTransform);
+            _shader->setUniform(_uniformCache.projectionMatrix, glm::dmat4(data.camera.projectionMatrix()));
+            _shader->setUniform(_uniformCache.textureOffset, _offset);
+            _shader->setUniform(_uniformCache.transparency, _transparency);
+
+            _shader->setUniform(_uniformCache.nightFactor, _nightFactor);
+            _shader->setUniform(_uniformCache.sunPosition, _sunPosition);
+
+            unit.activate();
+            _texture->bind();
+            _shader->setUniform(_uniformCache.texture, unit);
+        }
+        else if (renderPass == GeometryOnly) {
+            _geometryOnlyShader->setUniform(
+                _geomUniformCache.modelViewMatrix,
+                modelViewTransform
+            );
+            _geometryOnlyShader->setUniform(
+                _geomUniformCache.projectionMatrix,
+                glm::dmat4(data.camera.projectionMatrix())
+            );
+            _geometryOnlyShader->setUniform(
+                _geomUniformCache.textureOffset,
+                _offset
+            );
+        }
 
         glDisable(GL_CULL_FACE);
 
@@ -270,13 +305,29 @@ namespace openspace {
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
         glEnable(GL_CULL_FACE);
-        _shader->deactivate();
+       
+
+        if (renderPass == GeometryAndShading) {
+            _shader->deactivate();
+        }
+        else if (renderPass == GeometryOnly) {
+            _geometryOnlyShader->deactivate();
+        }
     }
 
     void RingsComponent::update(const UpdateData& data) {
         if (_shader->isDirty()) {
             _shader->rebuildFromFile();
             ghoul::opengl::updateUniformLocations(*_shader, _uniformCache, UniformNames);
+        }
+
+        if (_geometryOnlyShader->isDirty()) {
+            _geometryOnlyShader->rebuildFromFile();
+            ghoul::opengl::updateUniformLocations(
+                *_geometryOnlyShader, 
+                _geomUniformCache, 
+                GeomUniformNames
+            );
         }
 
         if (_planeIsDirty) {

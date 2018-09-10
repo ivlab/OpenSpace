@@ -447,9 +447,9 @@ void RenderableGlobe::render(const RenderData& data, RendererTasks& rendererTask
 
     if (_hasRings && _ringsComponent.isEnabled()) {
         _shadowComponent.begin(data);
-        _ringsComponent.draw(data);
+        _ringsComponent.draw(data, RingsComponent::GeometryOnly);
         _shadowComponent.end(data);
-        _ringsComponent.draw(data);
+        _ringsComponent.draw(data, RingsComponent::GeometryAndShading);
     }
 
     if (_savedCamera != nullptr) {

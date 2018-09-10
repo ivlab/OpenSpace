@@ -56,6 +56,11 @@ namespace openspace {
 
     class RingsComponent : public properties::PropertyOwner {
     public:
+        enum RenderPass {
+            GeometryOnly,
+            GeometryAndShading
+        };
+    public:
         RingsComponent(const ghoul::Dictionary& dictionary);
 
         void initialize();
@@ -65,7 +70,7 @@ namespace openspace {
 
         bool isReady() const;
 
-        void draw(const RenderData& data);
+        void draw(const RenderData& data, const RingsComponent::RenderPass renderPass);
         void update(const UpdateData& data);
 
         static documentation::Documentation Documentation();
@@ -84,8 +89,10 @@ namespace openspace {
         properties::BoolProperty _enabled;
 
         std::unique_ptr<ghoul::opengl::ProgramObject> _shader;
+        std::unique_ptr<ghoul::opengl::ProgramObject> _geometryOnlyShader;
         UniformCache(modelViewMatrix, projectionMatrix, textureOffset, 
             transparency, nightFactor, sunPosition, texture) _uniformCache;
+        UniformCache(modelViewMatrix, projectionMatrix, textureOffset) _geomUniformCache;
         std::unique_ptr<ghoul::opengl::Texture> _texture;
         std::unique_ptr<ghoul::filesystem::File> _textureFile;
 

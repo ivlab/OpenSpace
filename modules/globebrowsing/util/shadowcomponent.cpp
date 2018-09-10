@@ -153,7 +153,8 @@ namespace openspace {
     ShadowComponent::ShadowComponent(const ghoul::Dictionary& dictionary)
         : properties::PropertyOwner({ "Shadows" })		
         , _saveDepthTexture(SaveDepthTextureInfo)
-        , _divideExponent(SizeInfo, 1, 1, 1000)
+        , _distanceFraction(SizeInfo, 1, 1, 1000)
+        , _enabled({ "Enabled", "Enabled", "Enable/Disable Shadows" }, true)
         , _shadowMapDictionary(dictionary)
         , _shadowDepthTextureHeight(1024)
         , _shadowDepthTextureWidth(1024)
@@ -182,15 +183,14 @@ namespace openspace {
             _executeDepthTextureSave = true;
         });
 
+        addProperty(_enabled);
         addProperty(_saveDepthTexture);
-        addProperty(_divideExponent);
+        addProperty(_distanceFraction);
     }
 
     void ShadowComponent::initialize()
     {
         using ghoul::filesystem::File;
-
-        
     }
 
     bool ShadowComponent::isReady() const {
@@ -258,7 +258,7 @@ namespace openspace {
         glm::dvec3 lightDirection = glm::normalize(diffVector);
         
         // Percentage of the original light source distance
-        double multiplier = originalLightDistance * (static_cast<double>(_divideExponent)/1000.0);
+        double multiplier = originalLightDistance * (static_cast<double>(_distanceFraction)/1000.0);
         
         // New light source position
         glm::dvec3 lightPosition = data.modelTransform.translation + (lightDirection * multiplier);
@@ -531,5 +531,9 @@ namespace openspace {
                 fmt::format("Unknown error code: {0:x}", static_cast<int>(error))
             );
         }
+    }
+
+    bool ShadowComponent::isEnabled() const {
+        return _enabled;
     }
 } // namespace openspace

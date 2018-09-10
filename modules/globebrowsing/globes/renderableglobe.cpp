@@ -366,10 +366,14 @@ RenderableGlobe::RenderableGlobe(const ghoul::Dictionary& dictionary)
         _ringsComponent.initialize();
         addPropertySubOwner(_ringsComponent);
         _hasRings = true;
+        ghoul::Dictionary ringsDic;
+        dictionary.getValue("Rings", ringsDic);
+        if (ringsDic.hasKey("Shadows")) {
+            _shadowComponent.initialize();
+            addPropertySubOwner(_shadowComponent);
+        }
     }
 
-    // DEBUG TODO JCC
-    addPropertySubOwner(_shadowComponent);
 }
 
 void RenderableGlobe::initializeGL() {
@@ -441,7 +445,23 @@ void RenderableGlobe::render(const RenderData& data, RendererTasks& rendererTask
         const double distance = res * _chunkedLodGlobe->boundingSphere() / tan(fov / 2);
 
         if (distanceToCamera < distance) {
-            _chunkedLodGlobe->render(data, rendererTask);
+            if (_hasRings && _ringsComponent.isEnabled()) {
+                if (_shadowComponent.isEnabled()) {
+                    _shadowComponent.begin(data);
+                    _chunkedLodGlobe->render(data, rendererTask);
+                    _ringsComponent.draw(data, RingsComponent::GeometryOnly);
+                    _shadowComponent.end(data);
+                    _ringsComponent.draw(data, RingsComponent::GeometryAndShading);
+                    _chunkedLodGlobe->render(data, rendererTask);
+                }
+                else {
+                    _chunkedLodGlobe->render(data, rendererTask);
+                    _ringsComponent.draw(data, RingsComponent::GeometryAndShading);
+                }
+            }
+            else {
+                _chunkedLodGlobe->render(data, rendererTask);
+            }
         }
     }
 

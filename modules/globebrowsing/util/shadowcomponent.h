@@ -77,6 +77,8 @@ namespace openspace {
 
         static documentation::Documentation Documentation();
 
+        bool isEnabled() const;
+
     private:
         void createDepthTexture();
         void createShadowFBO();
@@ -89,7 +91,8 @@ namespace openspace {
 
         // DEBUG
         properties::TriggerProperty _saveDepthTexture;
-        properties::IntProperty _divideExponent;
+        properties::IntProperty _distanceFraction;
+        properties::BoolProperty _enabled;
         
         std::unique_ptr<ghoul::opengl::ProgramObject> _shaderProgram;
         

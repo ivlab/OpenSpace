@@ -384,7 +384,8 @@ namespace openspace {
         glTexStorage2D(
             GL_TEXTURE_2D, 
             1, 
-            GL_DEPTH_COMPONENT32F,
+            //GL_DEPTH_COMPONENT32F,
+            GL_DEPTH_COMPONENT32,
             _shadowDepthTextureWidth, 
             _shadowDepthTextureHeight
         );
@@ -441,18 +442,18 @@ namespace openspace {
 
     void ShadowComponent::saveDepthBuffer() {
         int size = _shadowDepthTextureWidth * _shadowDepthTextureHeight;
-        float * buffer = new float[size];
-        //unsigned char * buffer = new unsigned char[size];
-        //glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, buffer);
+        GLuint * buffer = new GLuint[size];
+        
         glReadPixels(
             0,
             0,
             _shadowDepthTextureWidth,
             _shadowDepthTextureHeight,
             GL_DEPTH_COMPONENT,
-            GL_FLOAT,
+            GL_UNSIGNED_INT,
             buffer
         );
+
         checkGLError("readDepthBuffer To buffer");
         std::fstream ppmFile;
 
@@ -462,14 +463,12 @@ namespace openspace {
             ppmFile << "P3" << std::endl;
             ppmFile << _shadowDepthTextureWidth << " " << _shadowDepthTextureHeight << std::endl;
             ppmFile << "255" << std::endl;
-
+            
             std::cout << "\n\nTexture saved to file depthBufferShadowMapping.ppm\n\n";
-            const float minVal = 0.88f;
             int k = 0;
             for (int i = 0; i < _shadowDepthTextureWidth; i++) {
                 for (int j = 0; j < _shadowDepthTextureHeight; j++, k++) {
-                    float scale = (static_cast<float>(buffer[k]) - minVal) / (1.0f - minVal);
-                    unsigned int val = static_cast<unsigned int>((scale * 255));
+                    unsigned int val = (buffer[k] / std::numeric_limits<GLuint>::max()) * 255;
                     ppmFile << val << " " << val << " " << val << " ";
                 }
                 ppmFile << std::endl;

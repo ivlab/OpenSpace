@@ -26,7 +26,7 @@
 #define _FLOATOPERATIONS_GLSL_
 
 /**
- * Convert a positive floating point distance [0, 10^27]
+ * Convert a positive floating point distance [0, 10^30]
  * (size of observable universe)
  * to a float in the range [-1, 1], suitable for depth buffer storage.
  * Note: This needs to be a monotonic function, so that the value can
@@ -34,7 +34,7 @@
  */
 float normalizeFloat(float inpt) {
     if (inpt > 1.0) {
-        return inpt / pow(10, 30);
+        return float(double(inpt) / double(1E30));
     } else {
         return inpt - 1.0;
     }
@@ -44,7 +44,7 @@ float denormalizeFloat(float inpt) {
     if (inpt < 0.0) {
         return inpt + 1.0;
     } else {
-        return inpt * pow(10, 30);
+        return inpt * 1E30;
     }
 }
 

@@ -267,14 +267,14 @@ local Earth = {
             }
             --Caster2 = { Name = "Independency Day Ship", Radius = 0.0, }
         },
-        Rings = {
-            Texture = texturesPath .. "/saturn_rings.png",
-            Size = 140445000,
-            Offset = { 74500 / 140445.100671159, 1.0 }, -- min / max extend
-            Shadows = {
-                Enabled = true,
-            } 
-        }
+        -- Rings = {
+        --     Texture = texturesPath .. "/saturn_rings.png",
+        --     Size = 140445000,
+        --     Offset = { 74500 / 140445.100671159, 1.0 }, -- min / max extend
+        --     Shadows = {
+        --         Enabled = true,
+        --     } 
+        -- }
     },
     Tag = { "planet_solarSystem", "planet_terrestrial" },
     GUI = {

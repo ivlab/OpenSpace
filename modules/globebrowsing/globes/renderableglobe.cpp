@@ -455,7 +455,11 @@ void RenderableGlobe::render(const RenderData& data, RendererTasks& rendererTask
                     _shadowComponent.end(data);
 
                     _chunkedLodGlobe->render(data, rendererTask);
-                    _ringsComponent.draw(data, RingsComponent::GeometryAndShading);
+                    _ringsComponent.draw(
+                        data, 
+                        RingsComponent::GeometryAndShading, 
+                        _shadowComponent.shadowMapData()
+                    );
                 }
                 else {
                     _chunkedLodGlobe->render(data, rendererTask);

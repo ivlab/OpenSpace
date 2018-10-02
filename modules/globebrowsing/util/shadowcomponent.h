@@ -62,6 +62,11 @@ namespace openspace {
 
     class ShadowComponent : public properties::PropertyOwner {
     public:
+        struct ShadowMapData {
+            glm::dmat4 shadowMatrix;
+            GLuint shadowDepthTexture;
+        };
+    public:
         ShadowComponent(const ghoul::Dictionary& dictionary);
 
         void initialize();
@@ -79,6 +84,8 @@ namespace openspace {
 
         bool isEnabled() const;
 
+        ShadowComponent::ShadowMapData shadowMapData() const;
+
     private:
         void createDepthTexture();
         void createShadowFBO();
@@ -88,6 +95,16 @@ namespace openspace {
         void checkGLError(const std::string & where) const;
 
     private:
+
+        ShadowMapData _shadowData;
+
+        // Texture coords in [0, 1], while clip coords in [-1, 1]
+        const glm::dmat4 _toTextureCoordsMatrix = glm::dmat4(
+            glm::vec4(0.5, 0.0, 0.0, 0.0),
+            glm::vec4(0.0, 0.5, 0.0, 0.0),
+            glm::vec4(0.0, 0.0, 0.5, 0.0),
+            glm::vec4(0.5, 0.5, 0.5, 1.0)
+        );
 
         // DEBUG
         properties::TriggerProperty _saveDepthTexture;

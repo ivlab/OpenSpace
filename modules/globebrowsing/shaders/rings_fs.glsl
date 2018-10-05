@@ -68,7 +68,7 @@ Fragment getFragment() {
         diffuse.a = pow(colorValue / (3.0 * transparency), 1);
     }
 
-    float shadow = 1.0;
+    float shadow = 0.0;
     if( shadowCoords.z >= 0 ) {
         shadow = textureProj(shadowMap, shadowCoords);
     }

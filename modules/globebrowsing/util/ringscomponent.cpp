@@ -220,7 +220,7 @@ namespace openspace {
 
         _geometryOnlyShader = global::renderEngine.buildRenderProgram(
             "RingsGeomOnlyProgram",
-            absPath("${MODULE_GLOBEBROWSING}/shaders/rings_vs.glsl"),
+            absPath("${MODULE_GLOBEBROWSING}/shaders/rings_geom_vs.glsl"),
             absPath("${MODULE_GLOBEBROWSING}/shaders/rings_geom_fs.glsl")
         );
 

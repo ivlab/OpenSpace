@@ -22,54 +22,40 @@
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                                         *
  ****************************************************************************************/
 
-#include "PowerScaling/powerScaling_fs.hglsl"
-#include "fragment.glsl"
+#version __CONTEXT__
 
-in vec2 vs_st;
-in float vs_screenSpaceDepth;
-in vec4 vs_positionViewSpace;
+#include "PowerScaling/powerScaling_vs.hglsl"
 
-uniform vec2 textureOffset;
+layout(location = 0) in vec2 in_position;
+layout(location = 1) in vec2 in_st;
 
+out vec2 vs_st;
+out float vs_screenSpaceDepth;
+out vec4 vs_positionViewSpace;
+out vec4 shadowCoords;
 
-Fragment getFragment() {
-    // Moving the origin to the center
-    vec2 st = (vs_st - vec2(0.5)) * 2.0;
+uniform dmat4 modelMatrix;
+uniform dmat4 modelViewMatrix;
+uniform dmat4 projectionMatrix;
+uniform dmat4 shadowMatrix;
 
-    // The length of the texture coordinates vector is our distance from the center
-    float radius = length(st);
+void main() {
+    vs_st = in_st;
 
-    // We only want to consider ring-like objects so we need to discard everything else
-    if (radius > 1.0)
-        discard;
+    dvec4 positionViewSpace = modelViewMatrix * dvec4(in_position.xy, 0.0, 1.0);
+    vec4 positionClipSpace = vec4(projectionMatrix * positionViewSpace);
+    vec4 positionClipSpaceZNorm = positionClipSpace;
+    
+    // if (positionClipSpaceZNorm.z > 1.0) {
+    //     positionClipSpaceZNorm.z = float(double(positionClipSpaceZNorm.z) / double(1E30));
+    // } else {
+    //     positionClipSpaceZNorm.z = positionClipSpaceZNorm.z - 1.0;
+    // }
 
-    // Remapping the texture coordinates
-    // Radius \in [0,1],  texCoord \in [textureOffset.x, textureOffset.y]
-    // textureOffset.x -> 0
-    // textureOffset.y -> 1
-    float texCoord = (radius - textureOffset.x) / (textureOffset.y - textureOffset.x);
-    if (texCoord < 0.f || texCoord > 1.f) {
-        discard;
-    }
-        
-    // The normal for the one plane depends on whether we are dealing
-    // with a front facing or back facing fragment
-    vec3 normal;
-    // The plane is oriented on the xz plane
-    // WARNING: This might not be the case for Uranus
-    if (gl_FrontFacing) {
-        normal = vec3(-1.0, 0.0, 0.0);
-    }
-    else {
-        normal = vec3(1.0, 0.0, 0.0);
-    }
+    shadowCoords = vec4(shadowMatrix * modelMatrix * dvec4(in_position.xy, 0.0, 1.0));
 
-    Fragment frag;
-    frag.color      = vec4(0.0);
-    //frag.depth      = vs_position.w;
-    //frag.depth      = vs_screenSpaceDepth;
-    //frag.gPosition  = vs_positionViewSpace;
-    //frag.gNormal    = vec4(normal, 1.0);
-
-    return frag;
+    //vs_screenSpaceDepth  = positionClipSpaceZNorm.w;
+    //vs_positionViewSpace = vec4(positionViewSpace);
+    
+    gl_Position = positionClipSpaceZNorm / positionClipSpaceZNorm.w;
 }

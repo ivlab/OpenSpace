@@ -243,10 +243,47 @@ namespace openspace {
         glm::dmat4 lightProjectionMatrix = glm::dmat4(camera->projectionMatrix());
         //glm::dmat4 lightProjectionMatrix = glm::ortho(-1000.0, 1000.0, -1000.0, 1000.0, 0.0010, 1000.0);
 
-        _shadowData.shadowMatrix = 
+
+        // compute the forward vector from target to eye
+        glm::dvec3 forward = lightDirection;
+        lightDirection = glm::normalize(lightDirection); // make unit length
+
+        // compute the left vector
+        glm::dvec3 left = glm::cross(glm::dvec3(0.0, 1.0, 0.0), forward); // cross product
+        left = glm::normalize(left);
+
+        // recompute the orthonormal up vector
+        glm::dvec3 up = glm::cross(forward, left);    // cross product
+
+        // init 4x4 matrix
+        glm::dmat4 shadowMatrix(1.0);
+        
+        double* matrix = glm::value_ptr(shadowMatrix);
+        // set rotation part, inverse rotation matrix: M^-1 = M^T for Euclidean transform
+        matrix[0] = left.x;
+        matrix[4] = left.y;
+        matrix[8] = left.z;
+        matrix[1] = up.x;
+        matrix[5] = up.y;
+        matrix[9] = up.z;
+        matrix[2] = forward.x;
+        matrix[6] = forward.y;
+        matrix[10] = forward.z;
+
+        // set translation part
+        matrix[12] = -left.x * lightPosition.x - left.y * lightPosition.y - left.z * lightPosition.z;
+        matrix[13] = -up.x * lightPosition.x - up.y * lightPosition.y - up.z * lightPosition.z;
+        matrix[14] = -forward.x * lightPosition.x - forward.y * lightPosition.y - forward.z * lightPosition.z;
+
+        _shadowData.shadowMatrix =
+            _toTextureCoordsMatrix *
+            lightProjectionMatrix *
+            shadowMatrix;
+
+        /*_shadowData.shadowMatrix = 
             _toTextureCoordsMatrix * 
             lightProjectionMatrix * 
-            camera->combinedViewMatrix();
+            camera->combinedViewMatrix();*/
         
         // Saves current state
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &_defaultFBO);

@@ -351,6 +351,12 @@ namespace openspace {
         _shader->setUniform("shadowMap", shadowMapUnit);
 
 
+        ghoul::opengl::TextureUnit shadowTextureUnit;
+        shadowTextureUnit.activate();
+        glBindTexture(GL_TEXTURE_2D, shadowData.shadowDepthTexture);
+        _shader->setUniform("shadowTexture", shadowTextureUnit);
+
+
         glDisable(GL_CULL_FACE);
 
         glBindVertexArray(_quad);

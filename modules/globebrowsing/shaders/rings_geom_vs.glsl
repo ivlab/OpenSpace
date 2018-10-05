@@ -44,7 +44,7 @@ void main() {
 
     dvec4 positionViewSpace = modelViewMatrix * dvec4(in_position.xy, 0.0, 1.0);
     vec4 positionClipSpace = vec4(projectionMatrix * positionViewSpace);
-    vec4 positionClipSpaceZNorm = positionClipSpace;
+    vec4 positionClipSpaceZNorm = z_normalization(positionClipSpace);
     
     // if (positionClipSpaceZNorm.z > 1.0) {
     //     positionClipSpaceZNorm.z = float(double(positionClipSpaceZNorm.z) / double(1E30));
@@ -54,8 +54,8 @@ void main() {
 
     shadowCoords = vec4(shadowMatrix * modelMatrix * dvec4(in_position.xy, 0.0, 1.0));
 
-    //vs_screenSpaceDepth  = positionClipSpaceZNorm.w;
+    vs_screenSpaceDepth  = positionClipSpaceZNorm.w;
     //vs_positionViewSpace = vec4(positionViewSpace);
     
-    gl_Position = positionClipSpaceZNorm / positionClipSpaceZNorm.w;
+    gl_Position = positionClipSpaceZNorm;
 }

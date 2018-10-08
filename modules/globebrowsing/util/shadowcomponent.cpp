@@ -60,10 +60,7 @@
 #include <locale>
 
 namespace {
-    constexpr const std::array<const char*, 6> UniformNames = {
-        "Color", "MVP", "sunPosition", "sunIntensity", "shadowMap", "shadowMatrix"
-    };
-
+    
     constexpr openspace::properties::Property::PropertyInfo TextureInfo = {
         "Texture",
         "Texture",
@@ -153,7 +150,7 @@ namespace openspace {
     ShadowComponent::ShadowComponent(const ghoul::Dictionary& dictionary)
         : properties::PropertyOwner({ "Shadows" })		
         , _saveDepthTexture(SaveDepthTextureInfo)
-        , _distanceFraction(SizeInfo, 1, 1, 100000)
+        , _distanceFraction(SizeInfo, 10, 1, 100000)
         , _enabled({ "Enabled", "Enabled", "Enable/Disable Shadows" }, true)
         , _shadowMapDictionary(dictionary)
         , _shadowDepthTextureHeight(1024)
@@ -198,25 +195,6 @@ namespace openspace {
     }
 
     void ShadowComponent::initializeGL() {
-        _shaderProgram = ghoul::opengl::ProgramObject::Build(
-            "ShadowProgram",
-            absPath("${MODULE_GLOBEBROWSING}/shaders/shadow_vs.glsl"),
-            absPath("${MODULE_GLOBEBROWSING}/shaders/shadow_fs.glsl")
-        );
-
-        ghoul::opengl::updateUniformLocations(*_shaderProgram, _uniformCache, UniformNames);
-        
-        _firstPassSubroutine = glGetSubroutineIndex(
-            *_shaderProgram, 
-            GL_FRAGMENT_SHADER, 
-            "recordDepth"
-        );
-        _secondPassSubroutine = glGetSubroutineIndex(
-            *_shaderProgram, 
-            GL_FRAGMENT_SHADER, 
-            "shadeWithShadow"
-        );
-
         createDepthTexture();
         createShadowFBO();
     }
@@ -228,22 +206,9 @@ namespace openspace {
 
     void ShadowComponent::begin(const RenderData& data) {
 
-        //_shaderProgram->activate();        
-
+        
         // Builds light's ModelViewProjectionMatrix:
-        /*glm::dvec3 lightPosition = glm::dvec3(_sunPosition);
-        glm::dvec3 lightDirection = glm::normalize(glm::dvec3(data.modelTransform.translation - lightPosition));
-        glm::dvec3 lightUpVector = glm::cross(data.camera.lookUpVectorWorldSpace(), lightDirection);
-        glm::dvec3 lightRightVector = glm::cross(lightDirection, lightUpVector);
-
-        glm::dmat4 lightViewMatrix = glm::dmat4(
-            glm::dvec4(lightUpVector, 0.0),
-            glm::dvec4(lightRightVector, 0.0),
-            glm::dvec4(lightDirection, 0.0),
-            glm::dvec4(0.0, 0.0, 0.0, 1.0)
-        );
-        lightViewMatrix = lightViewMatrix * glm::translate(glm::dmat4(1.0), -lightPosition);*/
-
+        
         // Camera matrix
         glm::dvec3 diffVector = glm::dvec3(_sunPosition) - data.modelTransform.translation;
         double originalLightDistance = glm::length(diffVector);
@@ -265,22 +230,6 @@ namespace openspace {
             glm::dvec3(0.0, 1.0, 0.0)
         );
 
-        /*glm::dmat4 lightProjectionMatrix = glm::perspective(
-            glm::radians(45.0f),
-            static_cast<float>(_shadowDepthTextureWidth) / static_cast<float>(_shadowDepthTextureHeight),
-            0.1f,
-            100.0f
-        );*/
-
-        /*glm::dmat4 lightModelViewProjectionMatrix = lightProjectionMatrix * lightViewMatrix *
-            glm::translate(glm::dmat4(1.0), -glm::dvec3(_sunPosition));*/
-
-        /*_shadowMatrix = toTextureCoordsMatrix * lightModelViewProjectionMatrix;
-
-        _shaderProgram->setUniform(_uniformCache.shadowMatrix, _shadowMatrix);
-        _shaderProgram->setUniform(_uniformCache.sunIntensity, glm::vec3(0.85f));
-        _shaderProgram->setUniform(_uniformCache.shadowMap, _shadowDepthTexture);*/        
-
         _cameraPos = data.camera.positionVec3();
         _cameraFocus = data.camera.focusPositionVec3();
         _cameraRotation = data.camera.rotationQuaternion();
@@ -294,10 +243,47 @@ namespace openspace {
         glm::dmat4 lightProjectionMatrix = glm::dmat4(camera->projectionMatrix());
         //glm::dmat4 lightProjectionMatrix = glm::ortho(-1000.0, 1000.0, -1000.0, 1000.0, 0.0010, 1000.0);
 
-        _shadowData.shadowMatrix = 
+
+        // compute the forward vector from target to eye
+        glm::dvec3 forward = lightDirection;
+        lightDirection = glm::normalize(lightDirection); // make unit length
+
+        // compute the left vector
+        glm::dvec3 left = glm::cross(glm::dvec3(0.0, 1.0, 0.0), forward); // cross product
+        left = glm::normalize(left);
+
+        // recompute the orthonormal up vector
+        glm::dvec3 up = glm::cross(forward, left);    // cross product
+
+        // init 4x4 matrix
+        glm::dmat4 shadowMatrix(1.0);
+        
+        double* matrix = glm::value_ptr(shadowMatrix);
+        // set rotation part, inverse rotation matrix: M^-1 = M^T for Euclidean transform
+        matrix[0] = left.x;
+        matrix[4] = left.y;
+        matrix[8] = left.z;
+        matrix[1] = up.x;
+        matrix[5] = up.y;
+        matrix[9] = up.z;
+        matrix[2] = forward.x;
+        matrix[6] = forward.y;
+        matrix[10] = forward.z;
+
+        // set translation part
+        matrix[12] = -left.x * lightPosition.x - left.y * lightPosition.y - left.z * lightPosition.z;
+        matrix[13] = -up.x * lightPosition.x - up.y * lightPosition.y - up.z * lightPosition.z;
+        matrix[14] = -forward.x * lightPosition.x - forward.y * lightPosition.y - forward.z * lightPosition.z;
+
+        _shadowData.shadowMatrix =
+            _toTextureCoordsMatrix *
+            lightProjectionMatrix *
+            shadowMatrix;
+
+        /*_shadowData.shadowMatrix = 
             _toTextureCoordsMatrix * 
             lightProjectionMatrix * 
-            camera->combinedViewMatrix();
+            camera->combinedViewMatrix();*/
         
         // Saves current state
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &_defaultFBO);
@@ -311,6 +297,7 @@ namespace openspace {
         checkGLError("begin() -- before binding FBO");
         glBindFramebuffer(GL_FRAMEBUFFER, _shadowFBO);
         checkGLError("begin() -- after binding FBO");
+        glClearDepth(1.0f);
         glClear(GL_DEPTH_BUFFER_BIT);
         checkGLError("begin() -- after cleanning Depth buffer");
         glViewport(0, 0, _shadowDepthTextureWidth, _shadowDepthTextureHeight);
@@ -330,9 +317,7 @@ namespace openspace {
         
     }
 
-    void ShadowComponent::end(const RenderData& data) {
-        //_shaderProgram->deactivate();
-           
+    void ShadowComponent::end(const RenderData& /*data*/) {   
         glFlush();
         if (_executeDepthTextureSave) {
             saveDepthBuffer();
@@ -372,31 +357,32 @@ namespace openspace {
         checkGLError("end() finished");
     }
 
-    void ShadowComponent::update(const UpdateData& data) {
+    void ShadowComponent::update(const UpdateData& /*data*/) {
         _sunPosition = global::renderEngine.scene()->sceneGraphNode("Sun")->worldPosition();
     }
 
     void ShadowComponent::createDepthTexture() {
         glGenTextures(1, &_shadowDepthTexture);
         glBindTexture(GL_TEXTURE_2D, _shadowDepthTexture);
-        glTexStorage2D(
+        /*glTexStorage2D(
             GL_TEXTURE_2D, 
             1, 
-            //GL_DEPTH_COMPONENT32F,
             GL_DEPTH_COMPONENT32,
             _shadowDepthTextureWidth, 
             _shadowDepthTextureHeight
         );
-
-        /*glTexImage2D(GL_TEXTURE_2D,
-                     0,
-                     GL_DEPTH_COMPONENT,
-                     _shadowDepthTextureWidth,
-                     _shadowDepthTextureHeight,
-                     0,
-                     GL_DEPTH_COMPONENT,
-                     GL_FLOAT,
-                     nullptr);*/
+*/
+        glTexImage2D(
+            GL_TEXTURE_2D,
+            0,
+            GL_DEPTH_COMPONENT32,
+            _shadowDepthTextureWidth,
+            _shadowDepthTextureHeight,
+            0,
+            GL_DEPTH_COMPONENT,
+            GL_FLOAT,
+            nullptr
+        );
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

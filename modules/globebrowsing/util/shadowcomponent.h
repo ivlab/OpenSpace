@@ -111,13 +111,8 @@ namespace openspace {
         properties::IntProperty _distanceFraction;
         properties::BoolProperty _enabled;
         
-        std::unique_ptr<ghoul::opengl::ProgramObject> _shaderProgram;
-        
         ghoul::Dictionary _shadowMapDictionary;
         
-        UniformCache(Color, MVP, sunPosition, sunIntensity,
-            shadowMap, shadowMatrix) _uniformCache;
-
         int _shadowDepthTextureHeight;
         int _shadowDepthTextureWidth;
         

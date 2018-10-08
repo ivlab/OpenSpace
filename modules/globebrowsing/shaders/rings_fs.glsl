@@ -30,6 +30,7 @@ in float vs_screenSpaceDepth;
 in vec4 vs_positionViewSpace;
 in vec4 shadowCoords;
 
+uniform sampler2D shadowTexture;
 uniform sampler2DShadow shadowMap;
 uniform sampler1D texture1;
 uniform vec2 textureOffset;
@@ -73,6 +74,17 @@ Fragment getFragment() {
         shadow = textureProj(shadowMap, shadowCoords);
     }
 
+    // vec4 depthInTexture = vec4(0.0, 0.0, 0.0, 1.0);
+    // if(shadowCoords.z >= 0) {
+    //     vec3 byHandCoords = vec3(shadowCoords / shadowCoords.w);
+    //     depthInTexture = texture(shadowTexture, byHandCoords.xy);
+    //     if (depthInTexture.x < byHandCoords.z) {
+    //         shadow = 0.0;
+    //     }
+    //     depthInTexture = vec4(byHandCoords.z, byHandCoords.z, byHandCoords.z, 1.0);
+    // }
+
+
     // The normal for the one plane depends on whether we are dealing
     // with a front facing or back facing fragment
     vec3 normal;
@@ -92,6 +104,7 @@ Fragment getFragment() {
     }
 
     Fragment frag;
+    //frag.color = depthInTexture;
     frag.color      = (0.55 * diffuse * shadow) + diffuse * 0.45;
     //frag.depth      = vs_position.w;
     frag.depth      = vs_screenSpaceDepth;

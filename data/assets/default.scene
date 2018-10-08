@@ -57,6 +57,7 @@ local Keybindings = {
 }
 
 local earthAsset = asset.require('scene/solarsystem/planets/earth/earth')
+local saturnAsset = asset.require('scene/solarsystem/planets/saturn/saturn')
 
 asset.onInitialize(function ()
     local now = openspace.time.currentWallTime()
@@ -72,7 +73,7 @@ asset.onInitialize(function ()
     )
 
     openspace.markInterestingNodes({
-        "Earth", "Mars", "Moon"
+        "Earth", "Mars", "Moon", "Saturn"
     })
 
     openspace.addVirtualProperty(
@@ -85,12 +86,13 @@ asset.onInitialize(function ()
         nil
     )
 
-    openspace.setPropertyValueSingle('Scene.EarthAtmosphere.renderable.Enabled', false);
+    --openspace.setPropertyValueSingle('Scene.EarthAtmosphere.renderable.Enabled', false);
     openspace.setPropertyValueSingle('Dashboard.Framerate.FrametimeType', 0);
     
 
     openspace.navigation.setCameraState({
-        Focus = earthAsset.Earth.Identifier,
+        --Focus = earthAsset.Earth.Identifier,
+        Focus = saturnAsset.Saturn.Identifier,
         Position = { 0, 0, 0 },
         Rotation = { 0.758797, 0.221490, -0.605693, -0.091135 },
     })
@@ -104,6 +106,6 @@ asset.onDeinitialize(function ()
     openspace.removeVirtualProperty("*Trail.renderable.Enabled")
 
     openspace.removeInterestingNodes({
-        "Earth", "Mars", "Moon"
+        "Earth", "Mars", "Moon", "Saturn"
     })
 end)

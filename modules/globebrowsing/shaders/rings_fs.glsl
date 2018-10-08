@@ -28,7 +28,9 @@
 in vec2 vs_st;
 in float vs_screenSpaceDepth;
 in vec4 vs_positionViewSpace;
+in vec4 shadowCoords;
 
+uniform sampler2DShadow shadowMap;
 uniform sampler1D texture1;
 uniform vec2 textureOffset;
 uniform float transparency;
@@ -66,6 +68,11 @@ Fragment getFragment() {
         diffuse.a = pow(colorValue / (3.0 * transparency), 1);
     }
 
+    float shadow = 1.0;
+    if( shadowCoords.z >= 0 ) {
+        shadow = textureProj(shadowMap, shadowCoords);
+    }
+
     // The normal for the one plane depends on whether we are dealing
     // with a front facing or back facing fragment
     vec3 normal;
@@ -85,7 +92,7 @@ Fragment getFragment() {
     }
 
     Fragment frag;
-    frag.color      = diffuse;
+    frag.color      = (0.55 * diffuse * shadow) + diffuse * 0.45;
     //frag.depth      = vs_position.w;
     frag.depth      = vs_screenSpaceDepth;
     if (diffuse.a < 1.0)

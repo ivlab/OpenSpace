@@ -27,6 +27,8 @@
 
 #include <openspace/properties/propertyowner.h>
 
+#include <modules/globebrowsing/util/shadowcomponent.h>
+
 #include <openspace/properties/scalar/boolproperty.h>
 #include <openspace/properties/scalar/floatproperty.h>
 #include <openspace/properties/scalar/intproperty.h>
@@ -70,7 +72,13 @@ namespace openspace {
 
         bool isReady() const;
 
+
         void draw(const RenderData& data, const RingsComponent::RenderPass renderPass);
+        void draw(
+            const RenderData& data, 
+            const RingsComponent::RenderPass renderPass, 
+            const ShadowComponent::ShadowMapData& shadowData
+        );
         void update(const UpdateData& data);
 
         static documentation::Documentation Documentation();

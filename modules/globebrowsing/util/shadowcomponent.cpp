@@ -153,7 +153,7 @@ namespace openspace {
     ShadowComponent::ShadowComponent(const ghoul::Dictionary& dictionary)
         : properties::PropertyOwner({ "Shadows" })		
         , _saveDepthTexture(SaveDepthTextureInfo)
-        , _distanceFraction(SizeInfo, 1, 1, 1000)
+        , _distanceFraction(SizeInfo, 1, 1, 100000)
         , _enabled({ "Enabled", "Enabled", "Enable/Disable Shadows" }, true)
         , _shadowMapDictionary(dictionary)
         , _shadowDepthTextureHeight(1024)
@@ -228,15 +228,7 @@ namespace openspace {
 
     void ShadowComponent::begin(const RenderData& data) {
 
-        //_shaderProgram->activate();
-
-        // Texture coords in [0, 1], while clip coords in [-1, 1]
-        glm::dmat4 toTextureCoordsMatrix = glm::dmat4(
-            glm::vec4(0.5, 0.0, 0.0, 0.0),
-            glm::vec4(0.0, 0.5, 0.0, 0.0),
-            glm::vec4(0.0, 0.0, 0.5, 0.0),
-            glm::vec4(0.5, 0.5, 0.5, 1.0)
-        );
+        //_shaderProgram->activate();        
 
         // Builds light's ModelViewProjectionMatrix:
         /*glm::dvec3 lightPosition = glm::dvec3(_sunPosition);
@@ -258,14 +250,15 @@ namespace openspace {
         glm::dvec3 lightDirection = glm::normalize(diffVector);
         
         // Percentage of the original light source distance
-        double multiplier = originalLightDistance * (static_cast<double>(_distanceFraction)/1000.0);
+        double multiplier = originalLightDistance * (static_cast<double>(_distanceFraction)/100000.0);
         
         // New light source position
         glm::dvec3 lightPosition = data.modelTransform.translation + (lightDirection * multiplier);
        
         // Light view matrix
         glm::dmat4 lightViewMatrix = glm::lookAt(
-            lightPosition,
+            //lightPosition,
+            glm::dvec3(0.0),
             //glm::dvec3(_sunPosition), // position
             glm::dvec3(data.modelTransform.translation), // focus 
             //data.camera.lookUpVectorWorldSpace()  // up
@@ -286,8 +279,7 @@ namespace openspace {
 
         _shaderProgram->setUniform(_uniformCache.shadowMatrix, _shadowMatrix);
         _shaderProgram->setUniform(_uniformCache.sunIntensity, glm::vec3(0.85f));
-        _shaderProgram->setUniform(_uniformCache.shadowMap, _shadowDepthTexture);*/
-
+        _shaderProgram->setUniform(_uniformCache.shadowMap, _shadowDepthTexture);*/        
 
         _cameraPos = data.camera.positionVec3();
         _cameraFocus = data.camera.focusPositionVec3();
@@ -298,8 +290,14 @@ namespace openspace {
         //camera->setPositionVec3(glm::dvec3(_sunPosition));
         camera->setFocusPositionVec3(data.modelTransform.translation);
         camera->setRotation(glm::dquat(glm::inverse(lightViewMatrix)));
-        // Forcing cache cleanning
-        camera->combinedViewMatrix();
+        
+        glm::dmat4 lightProjectionMatrix = glm::dmat4(camera->projectionMatrix());
+        //glm::dmat4 lightProjectionMatrix = glm::ortho(-1000.0, 1000.0, -1000.0, 1000.0, 0.0010, 1000.0);
+
+        _shadowData.shadowMatrix = 
+            _toTextureCoordsMatrix * 
+            lightProjectionMatrix * 
+            camera->combinedViewMatrix();
         
         // Saves current state
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &_defaultFBO);
@@ -325,7 +323,7 @@ namespace openspace {
         checkGLError("begin() -- set cullface to front");
         glEnable(GL_POLYGON_OFFSET_FILL);
         checkGLError("begin() -- enabled polygon offset fill");
-        glPolygonOffset(2.5f, 10.0f);
+        //glPolygonOffset(2.5f, 10.0f);
         checkGLError("begin() -- set values for polygon offset");
 
         checkGLError("begin() finished");
@@ -408,6 +406,8 @@ namespace openspace {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
         checkGLError("createdDepthTexture");
+
+        _shadowData.shadowDepthTexture = _shadowDepthTexture;
     }
 
     void ShadowComponent::createShadowFBO() {
@@ -529,5 +529,9 @@ namespace openspace {
 
     bool ShadowComponent::isEnabled() const {
         return _enabled;
+    }
+
+    ShadowComponent::ShadowMapData ShadowComponent::shadowMapData() const {
+        return _shadowData;
     }
 } // namespace openspace

@@ -150,6 +150,9 @@ in vec3 ellipsoidTangentPhiCameraSpace;
 uniform mat4 invViewModelTransform;
 #endif // USE_ACCURATE_NORMALS
 
+// Used only for ring shadows
+layout (location = 3) out vec4 _renderedPosition_;
+
 // levelInterpolationParameter is used to interpolate between a tile and its parent tiles
 // The value increases with the distance from the vertex (or fragment) to the camera
 in LevelWeights levelWeights;
@@ -292,6 +295,9 @@ Fragment getTileFragment() {
     frag.gPosition   = vec4(positionCameraSpace, 1.0); // in Camera Rig Space
 
     frag.depth = fs_position.w;
+
+    _renderedPosition_ = vec4(positionCameraSpace, 1.0);
+    
     return frag;
 }
 

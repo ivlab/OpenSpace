@@ -30,7 +30,7 @@ in float vs_screenSpaceDepth;
 in vec4 vs_positionViewSpace;
 in vec4 shadowCoords;
 
-uniform sampler2D shadowTexture;
+uniform sampler2D shadowPositionTexture;
 uniform sampler2DShadow shadowMap;
 uniform sampler1D texture1;
 uniform vec2 textureOffset;

@@ -156,6 +156,7 @@ namespace openspace {
         , _shadowDepthTextureHeight(1024)
         , _shadowDepthTextureWidth(1024)
         , _shadowDepthTexture(-1)
+        , _positionInLightSpaceTexture(-1)
         , _shadowFBO(-1)
         , _firstPassSubroutine(-1)
         , _secondPassSubroutine(1)
@@ -201,6 +202,7 @@ namespace openspace {
 
     void ShadowComponent::deinitializeGL() {
         glDeleteTextures(1, &_shadowDepthTexture);
+        glDeleteTextures(1, &_positionInLightSpaceTexture);
         glDeleteFramebuffers(1, &_shadowFBO);
     }
 
@@ -243,7 +245,9 @@ namespace openspace {
         glm::dmat4 lightProjectionMatrix = glm::dmat4(camera->projectionMatrix());
         //glm::dmat4 lightProjectionMatrix = glm::ortho(-1000.0, 1000.0, -1000.0, 1000.0, 0.0010, 1000.0);
 
-
+        /*
+        //=============== Manually Created Light Matrix ===================
+        //=================================================================
         // compute the forward vector from target to eye
         glm::dvec3 forward = lightDirection;
         lightDirection = glm::normalize(lightDirection); // make unit length
@@ -279,11 +283,16 @@ namespace openspace {
             _toTextureCoordsMatrix *
             lightProjectionMatrix *
             shadowMatrix;
+        //=======================================================================
+        //=======================================================================
+        */
 
-        /*_shadowData.shadowMatrix = 
+        //============= Light Matrix by Camera Matrices Composition =============
+        //=======================================================================
+        _shadowData.shadowMatrix = 
             _toTextureCoordsMatrix * 
             lightProjectionMatrix * 
-            camera->combinedViewMatrix();*/
+            camera->combinedViewMatrix();
         
         // Saves current state
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &_defaultFBO);
@@ -293,12 +302,15 @@ namespace openspace {
         _polygonOffSet = glIsEnabled(GL_POLYGON_OFFSET_FILL);
         glGetFloatv(GL_POLYGON_OFFSET_FACTOR, &_polygonOffSetFactor);
         glGetFloatv(GL_POLYGON_OFFSET_UNITS, &_polygonOffSetUnits);
+        glGetFloatv(GL_COLOR_CLEAR_VALUE, _colorClearValue);
+        glGetFloatv(GL_DEPTH_CLEAR_VALUE, &_depthClearValue);
 
         checkGLError("begin() -- before binding FBO");
         glBindFramebuffer(GL_FRAMEBUFFER, _shadowFBO);
         checkGLError("begin() -- after binding FBO");
         glClearDepth(1.0f);
-        glClear(GL_DEPTH_BUFFER_BIT);
+        glClearColor(0.0, 0.0, 0.0, 0.0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         checkGLError("begin() -- after cleanning Depth buffer");
         glViewport(0, 0, _shadowDepthTextureWidth, _shadowDepthTextureHeight);
         checkGLError("begin() -- set new viewport");
@@ -354,6 +366,14 @@ namespace openspace {
             glDisable(GL_POLYGON_OFFSET_FILL);
         }
 
+        glClearColor(
+            _colorClearValue[0], 
+            _colorClearValue[1], 
+            _colorClearValue[2], 
+            _colorClearValue[3]
+        );
+        glClearDepth(_depthClearValue);
+
         checkGLError("end() finished");
     }
 
@@ -375,7 +395,7 @@ namespace openspace {
         glTexImage2D(
             GL_TEXTURE_2D,
             0,
-            GL_DEPTH_COMPONENT32,
+            GL_DEPTH_COMPONENT,
             _shadowDepthTextureWidth,
             _shadowDepthTextureHeight,
             0,
@@ -393,7 +413,29 @@ namespace openspace {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
         checkGLError("createdDepthTexture");
 
+        glGenTextures(1, &_positionInLightSpaceTexture);
+        glBindTexture(GL_TEXTURE_2D, _positionInLightSpaceTexture);        
+        //glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+        glTexImage2D(
+            GL_TEXTURE_2D, 
+            0, 
+            GL_RGB32F, 
+            _shadowDepthTextureWidth,
+            _shadowDepthTextureHeight, 
+            0, 
+            GL_RGB, 
+            GL_FLOAT, 
+            nullptr
+        );
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        checkGLError("createdPositionTexture");
+
         _shadowData.shadowDepthTexture = _shadowDepthTexture;
+        _shadowData.positionInLightSpaceTexture = _positionInLightSpaceTexture;
     }
 
     void ShadowComponent::createShadowFBO() {
@@ -412,8 +454,16 @@ namespace openspace {
             _shadowDepthTexture, 
             0
         );
-        GLenum drawBuffers[] = { GL_NONE };
-        glDrawBuffers(1, drawBuffers);
+        glFramebufferTexture(
+            GL_FRAMEBUFFER,
+            GL_COLOR_ATTACHMENT3,
+            _positionInLightSpaceTexture,
+            0
+        );
+
+        //GLenum drawBuffers[] = { GL_NONE };
+        GLenum drawBuffers[] = { GL_NONE, GL_NONE, GL_NONE, GL_COLOR_ATTACHMENT3 };
+        glDrawBuffers(4, drawBuffers);
 
         // Restores system state
         glBindFramebuffer(GL_FRAMEBUFFER, _defaultFBO);
@@ -428,7 +478,7 @@ namespace openspace {
 
     void ShadowComponent::saveDepthBuffer() {
         int size = _shadowDepthTextureWidth * _shadowDepthTextureHeight;
-        GLuint * buffer = new GLuint[size];
+        /*GLuint * buffer = new GLuint[size];
         
         glReadPixels(
             0,
@@ -463,7 +513,87 @@ namespace openspace {
             ppmFile.close();
         }        
 
+        delete[] buffer;*/
+
+        GLubyte * buffer = new GLubyte[size];
+
+        glReadPixels(
+            0,
+            0,
+            _shadowDepthTextureWidth,
+            _shadowDepthTextureHeight,
+            GL_DEPTH_COMPONENT,
+            GL_UNSIGNED_BYTE,
+            buffer
+        );
+
+        checkGLError("readDepthBuffer To buffer");
+        std::fstream ppmFile;
+
+        ppmFile.open("depthBufferShadowMapping.ppm", std::fstream::out);
+        if (ppmFile.is_open()) {
+
+            ppmFile << "P3" << std::endl;
+            ppmFile << _shadowDepthTextureWidth << " " << _shadowDepthTextureHeight << std::endl;
+            ppmFile << "255" << std::endl;
+
+            std::cout << "\n\nTexture saved to file depthBufferShadowMapping.ppm\n\n";
+            int k = 0;
+            for (int i = 0; i < _shadowDepthTextureWidth; i++) {
+                for (int j = 0; j < _shadowDepthTextureHeight; j++, k++) {
+                    unsigned int val = static_cast<unsigned int>(buffer[k]);
+                    ppmFile << val << " " << val << " " << val << " ";
+                }
+                ppmFile << std::endl;
+            }
+
+            ppmFile.close();
+        }
+
         delete[] buffer;
+
+        GLubyte * bBuffer = new GLubyte[size * 3];
+
+        glReadBuffer(GL_COLOR_ATTACHMENT3);
+        glReadPixels(
+            0,
+            0,
+            _shadowDepthTextureWidth,
+            _shadowDepthTextureHeight,
+            GL_RGB,
+            GL_UNSIGNED_BYTE,
+            bBuffer
+        );
+
+        checkGLError("readPositionBuffer To buffer");
+        ppmFile.clear();
+
+        ppmFile.open("positionBufferShadowMapping.ppm", std::fstream::out);
+        if (ppmFile.is_open()) {
+
+            ppmFile << "P3" << std::endl;
+            ppmFile << _shadowDepthTextureWidth << " " << _shadowDepthTextureHeight << std::endl;
+            ppmFile << "255" << std::endl;
+
+            std::cout << "\n\nTexture saved to file positionBufferShadowMapping.ppm\n\n";
+            int k = 0;
+            for (int i = 0; i < _shadowDepthTextureWidth; i++) {
+                for (int j = 0; j < _shadowDepthTextureHeight; j++) {
+                    /*ppmFile << (buffer[k] / std::numeric_limits<GLuint>::max()) * 255 << " " 
+                        << (buffer[k+1] / std::numeric_limits<GLuint>::max()) * 255 << " " 
+                        << (buffer[k+2] / std::numeric_limits<GLuint>::max()) * 255 << " ";*/
+                    ppmFile << static_cast<unsigned int>(bBuffer[k]) << " "
+                        << static_cast<unsigned int>(bBuffer[k + 1]) << " "
+                        << static_cast<unsigned int>(bBuffer[k + 2]) << " ";
+                    k += 3;
+                }
+                ppmFile << std::endl;
+            }
+
+            ppmFile.close();
+        }
+
+        delete[] bBuffer;
     }
 
     void ShadowComponent::checkGLError(const std::string & where) const {

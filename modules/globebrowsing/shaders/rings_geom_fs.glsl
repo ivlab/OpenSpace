@@ -25,12 +25,13 @@
 #include "PowerScaling/powerScaling_fs.hglsl"
 #include "fragment.glsl"
 
+layout (location = 3) out vec4 renderedPosition;
+
 in vec2 vs_st;
 in float vs_screenSpaceDepth;
 in vec4 vs_positionViewSpace;
 
 uniform vec2 textureOffset;
-
 
 Fragment getFragment() {
     // Moving the origin to the center
@@ -65,11 +66,9 @@ Fragment getFragment() {
     }
 
     Fragment frag;
-    frag.color      = vec4(0.0);
-    //frag.depth      = vs_position.w;
-    //frag.depth      = vs_screenSpaceDepth;
-    //frag.gPosition  = vs_positionViewSpace;
-    //frag.gNormal    = vec4(normal, 1.0);
-
+    frag.color      = vec4(1.0);;
+    frag.depth      = vs_screenSpaceDepth;
+    renderedPosition = vec4(vs_positionViewSpace.xyz, 1.0);
+    
     return frag;
 }

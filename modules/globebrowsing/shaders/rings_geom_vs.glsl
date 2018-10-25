@@ -42,7 +42,7 @@ uniform dmat4 shadowMatrix;
 void main() {
     vs_st = in_st;
 
-    dvec4 positionViewSpace = modelViewMatrix * dvec4(in_position.xy, 0.0, 1.0);
+    dvec4 positionViewSpace = modelViewMatrix * dvec4(in_position.xy, 1.0, 1.0);
     vec4 positionClipSpace = vec4(projectionMatrix * positionViewSpace);
     vec4 positionClipSpaceZNorm = z_normalization(positionClipSpace);
     
@@ -55,7 +55,7 @@ void main() {
     shadowCoords = vec4(shadowMatrix * modelMatrix * dvec4(in_position.xy, 0.0, 1.0));
 
     vs_screenSpaceDepth  = positionClipSpaceZNorm.w;
-    //vs_positionViewSpace = vec4(positionViewSpace);
+    vs_positionViewSpace = vec4(positionViewSpace);
     
     gl_Position = positionClipSpaceZNorm;
 }

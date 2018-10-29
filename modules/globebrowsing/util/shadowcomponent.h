@@ -64,7 +64,10 @@ namespace openspace {
     public:
         struct ShadowMapData {
             glm::dmat4 shadowMatrix;
+            // temp
+            glm::dmat4 worldToLightSpaceMatrix;
             GLuint shadowDepthTexture;
+            GLuint positionInLightSpaceTexture;
         };
     public:
         ShadowComponent(const ghoul::Dictionary& dictionary);
@@ -117,6 +120,7 @@ namespace openspace {
         int _shadowDepthTextureWidth;
         
         GLuint _shadowDepthTexture;
+        GLuint _positionInLightSpaceTexture;
         GLuint _shadowFBO;
         GLuint _firstPassSubroutine;
         GLuint _secondPassSubroutine;
@@ -125,11 +129,14 @@ namespace openspace {
 
         GLboolean _faceCulling;
         GLboolean _polygonOffSet;
+        GLboolean _depthIsEnabled;
 
         GLenum _faceToCull;        
 
         GLfloat _polygonOffSetFactor;
         GLfloat _polygonOffSetUnits;
+        GLfloat _colorClearValue[4];
+        GLfloat _depthClearValue;
 
         glm::vec3 _sunPosition;
 

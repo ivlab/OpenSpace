@@ -353,9 +353,11 @@ namespace openspace {
 
         ghoul::opengl::TextureUnit shadowTextureUnit;
         shadowTextureUnit.activate();
-        glBindTexture(GL_TEXTURE_2D, shadowData.shadowDepthTexture);
-        _shader->setUniform("shadowTexture", shadowTextureUnit);
+        glBindTexture(GL_TEXTURE_2D, shadowData.positionInLightSpaceTexture);
+        _shader->setUniform("shadowPositionTexture", shadowTextureUnit);
 
+        // temp
+        _shader->setUniform("worldToLightSpaceMatrix", shadowData.worldToLightSpaceMatrix);
 
         glDisable(GL_CULL_FACE);
 

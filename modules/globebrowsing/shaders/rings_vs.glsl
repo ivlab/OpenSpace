@@ -33,11 +33,16 @@ out vec2 vs_st;
 out float vs_screenSpaceDepth;
 out vec4 vs_positionViewSpace;
 out vec4 shadowCoords;
+// temp
+out vec4 fragPosInLightSpace;
 
 uniform dmat4 modelMatrix;
 uniform dmat4 modelViewMatrix;
 uniform dmat4 projectionMatrix;
 uniform dmat4 shadowMatrix;
+
+// temp
+uniform dmat4 worldToLightSpaceMatrix;
 
 void main() {
     vs_st = in_st;
@@ -47,6 +52,8 @@ void main() {
     vec4 positionClipSpaceZNorm = z_normalization(positionClipSpace);
     
     shadowCoords = vec4(shadowMatrix * modelMatrix * dvec4(in_position.xy, 0.0, 1.0));
+    // temp
+    fragPosInLightSpace = vec4(worldToLightSpaceMatrix *  modelMatrix * dvec4(in_position.xy, 0.0, 1.0));
 
     vs_screenSpaceDepth  = positionClipSpaceZNorm.w;
     vs_positionViewSpace = vec4(positionViewSpace);

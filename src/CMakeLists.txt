@@ -53,6 +53,8 @@ set(OPENSPACE_SOURCE
     ${OPENSPACE_BASE_DIR}/src/interaction/navigationhandler_lua.inl
     ${OPENSPACE_BASE_DIR}/src/interaction/mousecamerastates.cpp
     ${OPENSPACE_BASE_DIR}/src/interaction/orbitalnavigator.cpp
+    ${OPENSPACE_BASE_DIR}/src/interaction/shortcutmanager.cpp
+    ${OPENSPACE_BASE_DIR}/src/interaction/shortcutmanager_lua.inl
     ${OPENSPACE_BASE_DIR}/src/mission/mission.cpp
     ${OPENSPACE_BASE_DIR}/src/mission/missionmanager.cpp
     ${OPENSPACE_BASE_DIR}/src/mission/missionmanager_lua.inl
@@ -230,6 +232,7 @@ set(OPENSPACE_HEADER
     ${OPENSPACE_BASE_DIR}/include/openspace/interaction/mousecamerastates.h
     ${OPENSPACE_BASE_DIR}/include/openspace/interaction/navigationhandler.h
     ${OPENSPACE_BASE_DIR}/include/openspace/interaction/orbitalnavigator.h
+    ${OPENSPACE_BASE_DIR}/include/openspace/interaction/shortcutmanager.h
     ${OPENSPACE_BASE_DIR}/include/openspace/mission/mission.h
     ${OPENSPACE_BASE_DIR}/include/openspace/mission/missionmanager.h
     ${OPENSPACE_BASE_DIR}/include/openspace/network/networkengine.h
@@ -382,7 +385,6 @@ set(OPENSPACE_HEADER
     ${OPENSPACE_BASE_DIR}/include/openspace/util/transformationmanager.h
     ${OPENSPACE_BASE_DIR}/include/openspace/util/threadpool.h
     ${OPENSPACE_BASE_DIR}/include/openspace/util/histogram.h
-    ${OPENSPACE_BASE_DIR}/include/openspace/util/gpudata.h
 )
 
 if (APPLE)
@@ -438,5 +440,10 @@ configure_file(
     ${OPENSPACE_BASE_DIR}/COMMIT.md
     @ONLY IMMEDIATE
 )
+
+if (APPLE)
+    find_library(APPKIT_LIBRARY AppKit REQUIRED)
+    target_link_libraries(openspace-core ${APPKIT_LIBRARY})
+endif ()
 
 set_openspace_compile_settings(openspace-core)

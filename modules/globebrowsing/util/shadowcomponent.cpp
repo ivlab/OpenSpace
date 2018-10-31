@@ -300,7 +300,7 @@ namespace openspace {
         glm::dmat4 lightProjectionMatrix = glm::dmat4(camera->projectionMatrix());
         //glm::dmat4 lightProjectionMatrix = glm::ortho(-1000.0, 1000.0, -1000.0, 1000.0, 0.0010, 1000.0);
         _shadowData.shadowMatrix = 
-            _toTextureCoordsMatrix * 
+            //_toTextureCoordsMatrix * 
             lightProjectionMatrix * 
             camera->combinedViewMatrix();
 
@@ -332,16 +332,14 @@ namespace openspace {
         checkGLError("begin() -- after cleanning Depth buffer");
         
         
-        //glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &_firstPassSubroutine);
-        //checkGLError("begin() -- got firstPassSubroutine");
-        //glEnable(GL_CULL_FACE);
-        //checkGLError("begin() -- enabled cull face");
-        //glCullFace(GL_FRONT);
-        //checkGLError("begin() -- set cullface to front");
-        //glEnable(GL_POLYGON_OFFSET_FILL);
-        //checkGLError("begin() -- enabled polygon offset fill");
-        //glPolygonOffset(2.5f, 10.0f);
-        //checkGLError("begin() -- set values for polygon offset");
+        /*glEnable(GL_CULL_FACE);
+        checkGLError("begin() -- enabled cull face");
+        glCullFace(GL_FRONT);
+        checkGLError("begin() -- set cullface to front");
+        glEnable(GL_POLYGON_OFFSET_FILL);
+        checkGLError("begin() -- enabled polygon offset fill");
+        glPolygonOffset(2.5f, 10.0f);
+        checkGLError("begin() -- set values for polygon offset");*/
 
         
 

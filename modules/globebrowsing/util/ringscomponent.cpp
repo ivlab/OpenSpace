@@ -329,8 +329,6 @@ namespace openspace {
 
         glm::dmat4 modelViewTransform = data.camera.combinedViewMatrix() * modelTransform;
 
-        _shader->setUniform("modelMatrix", modelTransform);
-
         _shader->setUniform(_uniformCache.modelViewMatrix, modelViewTransform);
         _shader->setUniform(_uniformCache.projectionMatrix, glm::dmat4(data.camera.projectionMatrix()));
         _shader->setUniform(_uniformCache.textureOffset, _offset);
@@ -344,7 +342,7 @@ namespace openspace {
         _texture->bind();
         _shader->setUniform(_uniformCache.texture, unit);
         
-        _shader->setUniform("shadowMatrix", shadowData.shadowMatrix);
+        _shader->setUniform("shadowMatrix", shadowData.shadowMatrix * modelTransform);
         ghoul::opengl::TextureUnit shadowMapUnit;
         shadowMapUnit.activate();
         glBindTexture(GL_TEXTURE_2D, shadowData.shadowDepthTexture);
@@ -357,7 +355,7 @@ namespace openspace {
         _shader->setUniform("shadowPositionTexture", shadowTextureUnit);
 
         // temp
-        _shader->setUniform("worldToLightSpaceMatrix", shadowData.worldToLightSpaceMatrix);
+        _shader->setUniform("objectToLightSpaceMatrix", shadowData.worldToLightSpaceMatrix * modelTransform);
 
         glDisable(GL_CULL_FACE);
 

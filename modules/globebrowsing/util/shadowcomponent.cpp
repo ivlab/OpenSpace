@@ -24,7 +24,7 @@
 
 #include <modules/globebrowsing/util/shadowcomponent.h>
 #include <modules/globebrowsing/globebrowsingmodule.h>
-#include <modules/globebrowsing/globes/renderableglobe.h>
+#include <modules/globebrowsing/src/renderableglobe.h>
 
 #include <openspace/documentation/documentation.h>
 #include <openspace/documentation/verifier.h>
@@ -64,7 +64,8 @@
 #include <locale>
 
 namespace {
-    
+    constexpr const char* _loggerCat = "ShadowComponent";
+
     constexpr openspace::properties::Property::PropertyInfo TextureInfo = {
         "Texture",
         "Texture",
@@ -107,6 +108,70 @@ namespace {
         "Save Depth Texture",
         "Debug"
     };
+
+    void checkFrameBufferState(const std::string& codePosition)
+    {
+        if (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+            LERROR("Framework not built. " + codePosition);
+            GLenum fbErr = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+            switch (fbErr) {
+            case GL_FRAMEBUFFER_UNDEFINED:
+                LERROR("Indefined framebuffer.");
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+                LERROR("Incomplete, missing attachement.");
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+                LERROR("Framebuffer doesn't have at least one image attached to it.");
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+                LERROR(
+                    "Returned if the value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is "
+                    "GL_NONE for any color attachment point(s) named by GL_DRAW_BUFFERi."
+                );
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+                LERROR(
+                    "Returned if GL_READ_BUFFER is not GL_NONE and the value of "
+                    "GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for the color "
+                    "attachment point named by GL_READ_BUFFER.");
+                break;
+            case GL_FRAMEBUFFER_UNSUPPORTED:
+                LERROR(
+                    "Returned if the combination of internal formats of the attached "
+                    "images violates an implementation - dependent set of restrictions."
+                );
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+                LERROR(
+                    "Returned if the value of GL_RENDERBUFFE_r_samples is not the same "
+                    "for all attached renderbuffers; if the value of GL_TEXTURE_SAMPLES "
+                    "is the not same for all attached textures; or , if the attached "
+                    "images are a mix of renderbuffers and textures, the value of "
+                    "GL_RENDERBUFFE_r_samples does not match the value of "
+                    "GL_TEXTURE_SAMPLES."
+                );
+                LERROR(
+                    "Returned if the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not "
+                    "the same for all attached textures; or , if the attached images are "
+                    "a mix of renderbuffers and textures, the value of "
+                    "GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not GL_TRUE for all attached "
+                    "textures."
+                );
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
+                LERROR(
+                    "Returned if any framebuffer attachment is layered, and any "
+                    "populated attachment is not layered, or if all populated color "
+                    "attachments are not from textures of the same target."
+                );
+                break;
+            default:
+                LDEBUG("No error found checking framebuffer: " + codePosition);
+                break;
+            }
+        }
+    }
 } // namespace
 
 namespace openspace {
@@ -208,6 +273,7 @@ namespace openspace {
         glDeleteTextures(1, &_shadowDepthTexture);
         glDeleteTextures(1, &_positionInLightSpaceTexture);
         glDeleteFramebuffers(1, &_shadowFBO);
+        checkGLError("ShadowComponent::deinitializeGL() -- Deleted Textures and Framebuffer");
     }
 
     void ShadowComponent::begin(const RenderData& data) {
@@ -307,7 +373,7 @@ namespace openspace {
         // temp
         _shadowData.worldToLightSpaceMatrix = camera->combinedViewMatrix();
 
-        
+        checkGLError("begin() -- Saving Current GL State");
         // Saves current state
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &_defaultFBO);
         glGetIntegerv(GL_VIEWPORT, _mViewport);
@@ -347,7 +413,8 @@ namespace openspace {
         
     }
 
-    void ShadowComponent::end(const RenderData& /*data*/) {   
+    void ShadowComponent::end(const RenderData& /*data*/) {
+        checkGLError("end() -- Flushing");
         glFlush();
         if (_executeDepthTextureSave) {
             saveDepthBuffer();
@@ -361,6 +428,7 @@ namespace openspace {
         
         // Restores system state
         glBindFramebuffer(GL_FRAMEBUFFER, _defaultFBO);
+        checkGLError("end() -- Rebinding default FBO");
         glViewport(
             _mViewport[0],
             _mViewport[1],
@@ -407,6 +475,7 @@ namespace openspace {
     }
 
     void ShadowComponent::createDepthTexture() {
+        checkGLError("createDepthTexture() -- Starting configuration");
         glGenTextures(1, &_shadowDepthTexture);
         glBindTexture(GL_TEXTURE_2D, _shadowDepthTexture);
         /*glTexStorage2D(
@@ -428,7 +497,7 @@ namespace openspace {
             GL_FLOAT,
             nullptr
         );
-
+        checkGLError("createDepthTexture() -- Depth testure created");
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
@@ -452,7 +521,7 @@ namespace openspace {
             GL_FLOAT, 
             nullptr
         );
-
+        checkGLError("createDepthTexture() -- Position/Distance buffer created");
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -486,10 +555,12 @@ namespace openspace {
             _positionInLightSpaceTexture,
             0
         );
-
+        checkGLError("createShadowFBO() -- Created Shadow Framebuffer");
         //GLenum drawBuffers[] = { GL_NONE };
         GLenum drawBuffers[] = { GL_NONE, GL_NONE, GL_NONE, GL_COLOR_ATTACHMENT3 };
         glDrawBuffers(4, drawBuffers);
+
+        checkFrameBufferState("createShadowFBO()");
 
         // Restores system state
         glBindFramebuffer(GL_FRAMEBUFFER, _defaultFBO);
@@ -499,7 +570,7 @@ namespace openspace {
             _mViewport[2],
             _mViewport[3]
         );*/
-        checkGLError("createdShadowFBO");
+        checkGLError("createShadowFBO() -- createdShadowFBO");
     }
 
     void ShadowComponent::saveDepthBuffer() {

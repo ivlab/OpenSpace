@@ -609,33 +609,28 @@ void RenderableGlobe::render(const RenderData& data, RendererTasks& rendererTask
     const double distance = res * boundingSphere() / tfov;
 
     if (distanceToCamera < distance) {
-        //renderChunks(data, rendererTask);
         if (_hasRings && _ringsComponent.isEnabled()) {
             if (_shadowComponent.isEnabled()) {
-                _shadowComponent.begin(data);
+                //_shadowComponent.begin(data);
 
-                //_chunkedLodGlobe->render(data, rendererTask);
+                //renderChunks(data, rendererTask);
+                //_ringsComponent.draw(data, RingsComponent::GeometryOnly);
+
+                //_shadowComponent.end(data);
+
                 renderChunks(data, rendererTask);
-                _ringsComponent.draw(data, RingsComponent::GeometryOnly);
-
-                _shadowComponent.end(data);
-
-                //_chunkedLodGlobe->render(data, rendererTask);
-                renderChunks(data, rendererTask);
-                _ringsComponent.draw(
+                /*_ringsComponent.draw(
                     data,
                     RingsComponent::GeometryAndShading,
                     _shadowComponent.shadowMapData()
-                );
+                );*/
             }
             else {
-                //_chunkedLodGlobe->render(data, rendererTask);
                 renderChunks(data, rendererTask);
                 _ringsComponent.draw(data, RingsComponent::GeometryAndShading);
             }
         }
         else {
-            //_chunkedLodGlobe->render(data, rendererTask);
             renderChunks(data, rendererTask);
         }
     }

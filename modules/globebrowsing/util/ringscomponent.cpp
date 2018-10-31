@@ -24,7 +24,7 @@
 
 #include <modules/globebrowsing/util/ringscomponent.h>
 #include <modules/globebrowsing/globebrowsingmodule.h>
-#include <modules/globebrowsing/globes/renderableglobe.h>
+#include <modules/globebrowsing/src/renderableglobe.h>
 
 #include <openspace/documentation/documentation.h>
 #include <openspace/documentation/verifier.h>

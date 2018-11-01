@@ -263,17 +263,19 @@ namespace openspace {
             _geometryOnlyShader->activate();
         }
         
-        glm::dmat4 modelTransform =
+        const glm::dmat4 modelTransform =
             glm::translate(glm::dmat4(1.0), data.modelTransform.translation) *
             glm::dmat4(data.modelTransform.rotation) *
             glm::scale(glm::dmat4(1.0), glm::dvec3(data.modelTransform.scale));
 
-        glm::dmat4 modelViewTransform = data.camera.combinedViewMatrix() * modelTransform;
+        const glm::dmat4 modelViewTransform = data.camera.combinedViewMatrix() * modelTransform;
+
+        const glm::dmat4 projectionMatrix = glm::dmat4(data.camera.projectionMatrix());
 
         ghoul::opengl::TextureUnit unit;
         if (renderPass == GeometryAndShading) {
             _shader->setUniform(_uniformCache.modelViewMatrix, modelViewTransform);
-            _shader->setUniform(_uniformCache.projectionMatrix, glm::dmat4(data.camera.projectionMatrix()));
+            _shader->setUniform(_uniformCache.projectionMatrix, projectionMatrix);
             _shader->setUniform(_uniformCache.textureOffset, _offset);
             _shader->setUniform(_uniformCache.transparency, _transparency);
 
@@ -291,14 +293,14 @@ namespace openspace {
             );
             _geometryOnlyShader->setUniform(
                 _geomUniformCache.projectionMatrix,
-                glm::dmat4(data.camera.projectionMatrix())
+                projectionMatrix
             );
             _geometryOnlyShader->setUniform(
                 _geomUniformCache.textureOffset,
                 _offset
             );
         }
-
+        
         glDisable(GL_CULL_FACE);
 
         glBindVertexArray(_quad);
@@ -322,30 +324,33 @@ namespace openspace {
     ) {
         _shader->activate();
         
-        glm::dmat4 modelTransform =
+        const glm::dmat4 modelTransform =
             glm::translate(glm::dmat4(1.0), data.modelTransform.translation) *
             glm::dmat4(data.modelTransform.rotation) *
             glm::scale(glm::dmat4(1.0), glm::dvec3(data.modelTransform.scale));
 
-        glm::dmat4 modelViewTransform = data.camera.combinedViewMatrix() * modelTransform;
+        const glm::dmat4 modelViewTransform = data.camera.combinedViewMatrix() * modelTransform;
+        const glm::dmat4 projectionMatrix = glm::dmat4(data.camera.projectionMatrix());
 
         _shader->setUniform(_uniformCache.modelViewMatrix, modelViewTransform);
-        _shader->setUniform(_uniformCache.projectionMatrix, glm::dmat4(data.camera.projectionMatrix()));
+        _shader->setUniform(_uniformCache.projectionMatrix, projectionMatrix);
         _shader->setUniform(_uniformCache.textureOffset, _offset);
         _shader->setUniform(_uniformCache.transparency, _transparency);
 
         _shader->setUniform(_uniformCache.nightFactor, _nightFactor);
         _shader->setUniform(_uniformCache.sunPosition, _sunPosition);
         
+        _shader->setUniform("shadowMatrix", shadowData.shadowMatrix * modelTransform);
+
         ghoul::opengl::TextureUnit unit;
         unit.activate();
         _texture->bind();
         _shader->setUniform(_uniformCache.texture, unit);
         
-        _shader->setUniform("shadowMatrix", shadowData.shadowMatrix * modelTransform);
         ghoul::opengl::TextureUnit shadowMapUnit;
         shadowMapUnit.activate();
         glBindTexture(GL_TEXTURE_2D, shadowData.shadowDepthTexture);
+        
         _shader->setUniform("shadowMap", shadowMapUnit);
 
 

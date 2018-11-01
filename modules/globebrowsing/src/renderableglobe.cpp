@@ -541,7 +541,7 @@ RenderableGlobe::RenderableGlobe(const ghoul::Dictionary& dictionary)
             }
         }
     }
-    /*
+    
     if (dictionary.hasKey("Rings")) {
         _ringsComponent.initialize();
         addPropertySubOwner(_ringsComponent);
@@ -553,7 +553,6 @@ RenderableGlobe::RenderableGlobe(const ghoul::Dictionary& dictionary)
             addPropertySubOwner(_shadowComponent);
         }
     }
-    */
 }
 
 void RenderableGlobe::initializeGL() {
@@ -564,9 +563,9 @@ void RenderableGlobe::initializeGL() {
     // function is called.
     recompileShaders();
 
-    //_ringsComponent.initializeGL();
+    _ringsComponent.initializeGL();
 
-    //_shadowComponent.initializeGL();
+    _shadowComponent.initializeGL();
 }
 
 void RenderableGlobe::deinitialize() {
@@ -586,9 +585,9 @@ void RenderableGlobe::deinitializeGL() {
 
     _grid.deinitializeGL();
 
-    //_ringsComponent.deinitializeGL();
+    _ringsComponent.deinitializeGL();
 
-    //_shadowComponent.deinitializeGL();
+    _shadowComponent.deinitializeGL();
 }
 
 bool RenderableGlobe::isReady() const {
@@ -612,23 +611,21 @@ void RenderableGlobe::render(const RenderData& data, RendererTasks& rendererTask
     if (distanceToCamera < distance) {
         if (_hasRings && _ringsComponent.isEnabled()) {
             if (_shadowComponent.isEnabled()) {
-                //_shadowComponent.begin(data);
-
-                //renderChunks(data, rendererTask);
-                //_ringsComponent.draw(data, RingsComponent::GeometryOnly);
-
-                //_shadowComponent.end(data);
-
+                _shadowComponent.begin(data);
                 renderChunks(data, rendererTask);
-                /*_ringsComponent.draw(
+                _ringsComponent.draw(data, RingsComponent::GeometryOnly);
+
+                _shadowComponent.end(data);
+                renderChunks(data, rendererTask);
+                _ringsComponent.draw(
                     data,
                     RingsComponent::GeometryAndShading,
                     _shadowComponent.shadowMapData()
-                );*/
+                );
             }
             else {
                 renderChunks(data, rendererTask);
-                //_ringsComponent.draw(data, RingsComponent::GeometryAndShading);
+                _ringsComponent.draw(data, RingsComponent::GeometryAndShading);
             }
         }
         else {
@@ -658,8 +655,8 @@ void RenderableGlobe::update(const UpdateData& data) {
     }
     _layerManager.update();
 
-    //_ringsComponent.update(data);
-    //_shadowComponent.update(data);
+    _ringsComponent.update(data);
+    _shadowComponent.update(data);
 }
 
 const LayerManager& RenderableGlobe::layerManager() const {

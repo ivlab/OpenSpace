@@ -30,7 +30,7 @@ layout(location = 0) in vec2 in_position;
 layout(location = 1) in vec2 in_st;
 
 out vec2 vs_st;
-out float vs_screenSpaceDepth;
+out vec4 vs_screenSpaceDepth;
 out vec4 vs_positionViewSpace;
 
 uniform dmat4 modelMatrix;
@@ -44,14 +44,7 @@ void main() {
     vec4 positionClipSpace = vec4(projectionMatrix * positionViewSpace);
     vec4 positionClipSpaceZNorm = z_normalization(positionClipSpace);
     
-    // if (positionClipSpaceZNorm.z > 1.0) {
-    //     positionClipSpaceZNorm.z = float(double(positionClipSpaceZNorm.z) / double(1E30));
-    // } else {
-    //     positionClipSpaceZNorm.z = positionClipSpaceZNorm.z - 1.0;
-    // }
-
-
-    vs_screenSpaceDepth  = positionClipSpaceZNorm.w;
+    vs_screenSpaceDepth  = positionClipSpaceZNorm;
     vs_positionViewSpace = vec4(positionViewSpace);
     
     gl_Position = positionClipSpaceZNorm;

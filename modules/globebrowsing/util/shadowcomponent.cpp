@@ -355,7 +355,7 @@ namespace openspace {
 
         camera->setPositionVec3(lightPosition);
         camera->setFocusPositionVec3(data.modelTransform.translation);
-        camera->setRotation(glm::dquat(glm::inverse(cameraRotationMatrix)));        
+        camera->setRotation(glm::dquat(glm::inverse(cameraRotationMatrix)));
 
         //=======================================================================
         //=======================================================================
@@ -415,7 +415,7 @@ namespace openspace {
 
     void ShadowComponent::end(const RenderData& /*data*/) {
         checkGLError("end() -- Flushing");
-        glFlush();
+        //glFlush();
         if (_executeDepthTextureSave) {
             saveDepthBuffer();
             _executeDepthTextureSave = false;
@@ -500,11 +500,13 @@ namespace openspace {
         checkGLError("createDepthTexture() -- Depth testure created");
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        /*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, shadowBorder);
+        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, shadowBorder);*/
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LESS);// GL_LEQUAL);
         checkGLError("createdDepthTexture");
 
         glGenTextures(1, &_positionInLightSpaceTexture);

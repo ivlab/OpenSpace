@@ -40,6 +40,8 @@ uniform bool hasSunPosition;
 uniform vec3 sunPosition;
 uniform float _nightFactor;
 
+// temp
+in vec4 fragPosInLightSpace;
 
 Fragment getFragment() {
     // Moving the origin to the center
@@ -69,20 +71,24 @@ Fragment getFragment() {
         diffuse.a = pow(colorValue / (3.0 * transparency), 1);
     }
 
+    // shadow == 1.0 means it is not in shadow
     float shadow = 1.0;
-    if( shadowCoords.z >= 0 ) {
+    if ( shadowCoords.z >= 0 ) {
         shadow = textureProj(shadowMap, shadowCoords);
     }
 
-    // vec4 depthInTexture = vec4(0.0, 0.0, 0.0, 1.0);
-    // if(shadowCoords.z >= 0) {
-    //     vec3 byHandCoords = vec3(shadowCoords / shadowCoords.w);
-    //     depthInTexture = texture(shadowTexture, byHandCoords.xy);
-    //     if (depthInTexture.x < byHandCoords.z) {
-    //         shadow = 0.0;
-    //     }
-    //     depthInTexture = vec4(byHandCoords.z, byHandCoords.z, byHandCoords.z, 1.0);
-    // }
+    vec4 depthInTexture = vec4(0.0, 0.0, 0.0, 1.0);
+    if (shadowCoords.z >= 0) {
+        vec3 byHandCoords = vec3(shadowCoords / shadowCoords.w) * vec3(0.5) + vec3(0.5);
+        depthInTexture = texture(shadowPositionTexture, byHandCoords.xy);
+        //depthInTexture = texture(shadowPositionTexture, shadowCoords.xy);
+        // if (depthInTexture.x < byHandCoords.z) {
+        //     shadow = 0.0;
+        // }
+        if (depthInTexture.x > length(fragPosInLightSpace)) {
+            shadow = 0.0;
+        }
+    }
 
 
     // The normal for the one plane depends on whether we are dealing

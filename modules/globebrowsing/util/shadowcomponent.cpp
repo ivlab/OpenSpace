@@ -24,7 +24,7 @@
 
 #include <modules/globebrowsing/util/shadowcomponent.h>
 #include <modules/globebrowsing/globebrowsingmodule.h>
-#include <modules/globebrowsing/globes/renderableglobe.h>
+#include <modules/globebrowsing/src/renderableglobe.h>
 
 #include <openspace/documentation/documentation.h>
 #include <openspace/documentation/verifier.h>
@@ -33,6 +33,10 @@
 #include <openspace/engine/globals.h>
 #include <openspace/engine/openspaceengine.h>
 #include <openspace/engine/moduleengine.h>
+
+#include <openspace/interaction/navigationhandler.h>
+#include <openspace/interaction/orbitalnavigator.h>
+#include <openspace/interaction/keyframenavigator.h>
 
 #include <openspace/rendering/renderengine.h>
 #include <openspace/scene/scene.h>
@@ -60,7 +64,8 @@
 #include <locale>
 
 namespace {
-    
+    constexpr const char* _loggerCat = "ShadowComponent";
+
     constexpr openspace::properties::Property::PropertyInfo TextureInfo = {
         "Texture",
         "Texture",
@@ -103,6 +108,70 @@ namespace {
         "Save Depth Texture",
         "Debug"
     };
+
+    void checkFrameBufferState(const std::string& codePosition)
+    {
+        if (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+            LERROR("Framework not built. " + codePosition);
+            GLenum fbErr = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+            switch (fbErr) {
+            case GL_FRAMEBUFFER_UNDEFINED:
+                LERROR("Indefined framebuffer.");
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+                LERROR("Incomplete, missing attachement.");
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+                LERROR("Framebuffer doesn't have at least one image attached to it.");
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+                LERROR(
+                    "Returned if the value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is "
+                    "GL_NONE for any color attachment point(s) named by GL_DRAW_BUFFERi."
+                );
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+                LERROR(
+                    "Returned if GL_READ_BUFFER is not GL_NONE and the value of "
+                    "GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for the color "
+                    "attachment point named by GL_READ_BUFFER.");
+                break;
+            case GL_FRAMEBUFFER_UNSUPPORTED:
+                LERROR(
+                    "Returned if the combination of internal formats of the attached "
+                    "images violates an implementation - dependent set of restrictions."
+                );
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+                LERROR(
+                    "Returned if the value of GL_RENDERBUFFE_r_samples is not the same "
+                    "for all attached renderbuffers; if the value of GL_TEXTURE_SAMPLES "
+                    "is the not same for all attached textures; or , if the attached "
+                    "images are a mix of renderbuffers and textures, the value of "
+                    "GL_RENDERBUFFE_r_samples does not match the value of "
+                    "GL_TEXTURE_SAMPLES."
+                );
+                LERROR(
+                    "Returned if the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not "
+                    "the same for all attached textures; or , if the attached images are "
+                    "a mix of renderbuffers and textures, the value of "
+                    "GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not GL_TRUE for all attached "
+                    "textures."
+                );
+                break;
+            case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
+                LERROR(
+                    "Returned if any framebuffer attachment is layered, and any "
+                    "populated attachment is not layered, or if all populated color "
+                    "attachments are not from textures of the same target."
+                );
+                break;
+            default:
+                LDEBUG("No error found checking framebuffer: " + codePosition);
+                break;
+            }
+        }
+    }
 } // namespace
 
 namespace openspace {
@@ -204,6 +273,7 @@ namespace openspace {
         glDeleteTextures(1, &_shadowDepthTexture);
         glDeleteTextures(1, &_positionInLightSpaceTexture);
         glDeleteFramebuffers(1, &_shadowFBO);
+        checkGLError("ShadowComponent::deinitializeGL() -- Deleted Textures and Framebuffer");
     }
 
     void ShadowComponent::begin(const RenderData& data) {
@@ -222,78 +292,88 @@ namespace openspace {
         // New light source position
         glm::dvec3 lightPosition = data.modelTransform.translation + (lightDirection * multiplier);
        
-        // Light view matrix
-        glm::dmat4 lightViewMatrix = glm::lookAt(
-            //lightPosition,
-            glm::dvec3(0.0),
-            //glm::dvec3(_sunPosition), // position
-            glm::dvec3(data.modelTransform.translation), // focus 
-            //data.camera.lookUpVectorWorldSpace()  // up
-            glm::dvec3(0.0, 1.0, 0.0)
-        );
-
-        _cameraPos = data.camera.positionVec3();
-        _cameraFocus = data.camera.focusPositionVec3();
-        _cameraRotation = data.camera.rotationQuaternion();
-        
+        // Saving current Camera parameters:
         Camera *camera = global::renderEngine.camera();
-        camera->setPositionVec3(lightPosition);
-        //camera->setPositionVec3(glm::dvec3(_sunPosition));
-        camera->setFocusPositionVec3(data.modelTransform.translation);
-        camera->setRotation(glm::dquat(glm::inverse(lightViewMatrix)));
+        _cameraPos = camera->positionVec3();
+        _cameraFocus = camera->focusPositionVec3();
+        _cameraRotation = camera->rotationQuaternion();
+
+        //=============== Automatically Created Camera Matrix ===================
+        //=======================================================================
+        //glm::dmat4 lightViewMatrix = glm::lookAt(
+        //    //lightPosition,
+        //    glm::dvec3(0.0),
+        //    //glm::dvec3(_sunPosition), // position
+        //    glm::dvec3(data.modelTransform.translation), // focus 
+        //    data.camera.lookUpVectorWorldSpace()  // up
+        //    //glm::dvec3(0.0, 1.0, 0.0)
+        //);
+
+        //camera->setPositionVec3(lightPosition);
+        //camera->setFocusPositionVec3(data.modelTransform.translation);
+        //camera->setRotation(glm::dquat(glm::inverse(lightViewMatrix)));
         
-        glm::dmat4 lightProjectionMatrix = glm::dmat4(camera->projectionMatrix());
-        //glm::dmat4 lightProjectionMatrix = glm::ortho(-1000.0, 1000.0, -1000.0, 1000.0, 0.0010, 1000.0);
+        //=======================================================================
+        //=======================================================================
 
-        /*
-        //=============== Manually Created Light Matrix ===================
-        //=================================================================
-        // compute the forward vector from target to eye
-        glm::dvec3 forward = lightDirection;
-        lightDirection = glm::normalize(lightDirection); // make unit length
 
-        // compute the left vector
-        glm::dvec3 left = glm::cross(glm::dvec3(0.0, 1.0, 0.0), forward); // cross product
-        left = glm::normalize(left);
-
-        // recompute the orthonormal up vector
-        glm::dvec3 up = glm::cross(forward, left);    // cross product
+        //=============== Manually Created Camera Matrix ===================
+        //==================================================================
+        // camera Z
+        glm::dvec3 cameraZ = glm::normalize(lightDirection);
+        
+        // camera X
+        glm::dvec3 upVector = data.camera.lookUpVectorWorldSpace();
+        glm::dvec3 cameraX = glm::normalize(glm::cross(upVector, cameraZ)); 
+        
+        // camera Y
+        glm::dvec3 cameraY = glm::cross(cameraZ, cameraX);
 
         // init 4x4 matrix
-        glm::dmat4 shadowMatrix(1.0);
+        glm::dmat4 cameraRotationMatrix(1.0);
         
-        double* matrix = glm::value_ptr(shadowMatrix);
-        // set rotation part, inverse rotation matrix: M^-1 = M^T for Euclidean transform
-        matrix[0] = left.x;
-        matrix[4] = left.y;
-        matrix[8] = left.z;
-        matrix[1] = up.x;
-        matrix[5] = up.y;
-        matrix[9] = up.z;
-        matrix[2] = forward.x;
-        matrix[6] = forward.y;
-        matrix[10] = forward.z;
+        double* matrix = glm::value_ptr(cameraRotationMatrix);
+        matrix[0] = cameraX.x;
+        matrix[4] = cameraX.y;
+        matrix[8] = cameraX.z;
+        matrix[1] = cameraY.x;
+        matrix[5] = cameraY.y;
+        matrix[9] = cameraY.z;
+        matrix[2] = cameraZ.x;
+        matrix[6] = cameraZ.y;
+        matrix[10] = cameraZ.z;
 
         // set translation part
-        matrix[12] = -left.x * lightPosition.x - left.y * lightPosition.y - left.z * lightPosition.z;
-        matrix[13] = -up.x * lightPosition.x - up.y * lightPosition.y - up.z * lightPosition.z;
-        matrix[14] = -forward.x * lightPosition.x - forward.y * lightPosition.y - forward.z * lightPosition.z;
+        // We aren't setting the position here because it is set in the camera->setPosition()
+        //matrix[12] = -glm::dot(cameraX, lightPosition);
+        //matrix[13] = -glm::dot(cameraY, lightPosition);
+        //matrix[14] = -glm::dot(cameraZ, lightPosition);
 
-        _shadowData.shadowMatrix =
-            _toTextureCoordsMatrix *
-            lightProjectionMatrix *
-            shadowMatrix;
-        //=======================================================================
-        //=======================================================================
+        /*Scene* scene = camera->parent()->scene();
+        global::navigationHandler.setFocusNode(data.);
         */
+
+        camera->setPositionVec3(lightPosition);
+        camera->setFocusPositionVec3(data.modelTransform.translation);
+        camera->setRotation(glm::dquat(glm::inverse(cameraRotationMatrix)));
+
+        //=======================================================================
+        //=======================================================================
+        
 
         //============= Light Matrix by Camera Matrices Composition =============
         //=======================================================================
+        glm::dmat4 lightProjectionMatrix = glm::dmat4(camera->projectionMatrix());
+        //glm::dmat4 lightProjectionMatrix = glm::ortho(-1000.0, 1000.0, -1000.0, 1000.0, 0.0010, 1000.0);
         _shadowData.shadowMatrix = 
-            _toTextureCoordsMatrix * 
+            //_toTextureCoordsMatrix * 
             lightProjectionMatrix * 
             camera->combinedViewMatrix();
-        
+
+        // temp
+        _shadowData.worldToLightSpaceMatrix = camera->combinedViewMatrix();
+
+        checkGLError("begin() -- Saving Current GL State");
         // Saves current state
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &_defaultFBO);
         glGetIntegerv(GL_VIEWPORT, _mViewport);
@@ -304,33 +384,38 @@ namespace openspace {
         glGetFloatv(GL_POLYGON_OFFSET_UNITS, &_polygonOffSetUnits);
         glGetFloatv(GL_COLOR_CLEAR_VALUE, _colorClearValue);
         glGetFloatv(GL_DEPTH_CLEAR_VALUE, &_depthClearValue);
+        _depthIsEnabled = glIsEnabled(GL_DEPTH_TEST);
 
         checkGLError("begin() -- before binding FBO");
         glBindFramebuffer(GL_FRAMEBUFFER, _shadowFBO);
         checkGLError("begin() -- after binding FBO");
+        glViewport(0, 0, _shadowDepthTextureWidth, _shadowDepthTextureHeight);
+        checkGLError("begin() -- set new viewport");
         glClearDepth(1.0f);
+        glEnable(GL_DEPTH_TEST);
         glClearColor(0.0, 0.0, 0.0, 0.0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         checkGLError("begin() -- after cleanning Depth buffer");
-        glViewport(0, 0, _shadowDepthTextureWidth, _shadowDepthTextureHeight);
-        checkGLError("begin() -- set new viewport");
-        //glUniformSubroutinesuiv(GL_FRAGMENT_SHADER, 1, &_firstPassSubroutine);
-        //checkGLError("begin() -- got firstPassSubroutine");
-        glEnable(GL_CULL_FACE);
+        
+        
+        /*glEnable(GL_CULL_FACE);
         checkGLError("begin() -- enabled cull face");
         glCullFace(GL_FRONT);
         checkGLError("begin() -- set cullface to front");
         glEnable(GL_POLYGON_OFFSET_FILL);
         checkGLError("begin() -- enabled polygon offset fill");
-        //glPolygonOffset(2.5f, 10.0f);
-        checkGLError("begin() -- set values for polygon offset");
+        glPolygonOffset(2.5f, 10.0f);
+        checkGLError("begin() -- set values for polygon offset");*/
+
+        
 
         checkGLError("begin() finished");
         
     }
 
-    void ShadowComponent::end(const RenderData& /*data*/) {   
-        glFlush();
+    void ShadowComponent::end(const RenderData& /*data*/) {
+        checkGLError("end() -- Flushing");
+        //glFlush();
         if (_executeDepthTextureSave) {
             saveDepthBuffer();
             _executeDepthTextureSave = false;
@@ -343,6 +428,7 @@ namespace openspace {
         
         // Restores system state
         glBindFramebuffer(GL_FRAMEBUFFER, _defaultFBO);
+        checkGLError("end() -- Rebinding default FBO");
         glViewport(
             _mViewport[0],
             _mViewport[1],
@@ -356,6 +442,13 @@ namespace openspace {
         }
         else {
             glDisable(GL_CULL_FACE);
+        }
+
+        if (_depthIsEnabled) {
+            glEnable(GL_DEPTH_TEST);
+        }
+        else {
+            glDisable(GL_DEPTH_TEST);
         }
 
         if (_polygonOffSet) {
@@ -382,6 +475,7 @@ namespace openspace {
     }
 
     void ShadowComponent::createDepthTexture() {
+        checkGLError("createDepthTexture() -- Starting configuration");
         glGenTextures(1, &_shadowDepthTexture);
         glBindTexture(GL_TEXTURE_2D, _shadowDepthTexture);
         /*glTexStorage2D(
@@ -403,14 +497,16 @@ namespace openspace {
             GL_FLOAT,
             nullptr
         );
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        checkGLError("createDepthTexture() -- Depth testure created");
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        /*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, shadowBorder);
+        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, shadowBorder);*/
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LESS);// GL_LEQUAL);
         checkGLError("createdDepthTexture");
 
         glGenTextures(1, &_positionInLightSpaceTexture);
@@ -427,12 +523,14 @@ namespace openspace {
             GL_FLOAT, 
             nullptr
         );
-
+        checkGLError("createDepthTexture() -- Position/Distance buffer created");
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         checkGLError("createdPositionTexture");
+
+        glBindTexture(GL_TEXTURE_2D, 0);
 
         _shadowData.shadowDepthTexture = _shadowDepthTexture;
         _shadowData.positionInLightSpaceTexture = _positionInLightSpaceTexture;
@@ -447,10 +545,9 @@ namespace openspace {
 
         glGenFramebuffers(1, &_shadowFBO);
         glBindFramebuffer(GL_FRAMEBUFFER, _shadowFBO);
-        glFramebufferTexture2D(
+        glFramebufferTexture(
             GL_FRAMEBUFFER, 
             GL_DEPTH_ATTACHMENT, 
-            GL_TEXTURE_2D, 
             _shadowDepthTexture, 
             0
         );
@@ -460,10 +557,12 @@ namespace openspace {
             _positionInLightSpaceTexture,
             0
         );
-
+        checkGLError("createShadowFBO() -- Created Shadow Framebuffer");
         //GLenum drawBuffers[] = { GL_NONE };
         GLenum drawBuffers[] = { GL_NONE, GL_NONE, GL_NONE, GL_COLOR_ATTACHMENT3 };
         glDrawBuffers(4, drawBuffers);
+
+        checkFrameBufferState("createShadowFBO()");
 
         // Restores system state
         glBindFramebuffer(GL_FRAMEBUFFER, _defaultFBO);
@@ -473,7 +572,7 @@ namespace openspace {
             _mViewport[2],
             _mViewport[3]
         );*/
-        checkGLError("createdShadowFBO");
+        checkGLError("createShadowFBO() -- createdShadowFBO");
     }
 
     void ShadowComponent::saveDepthBuffer() {

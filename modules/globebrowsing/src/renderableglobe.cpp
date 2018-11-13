@@ -611,11 +611,14 @@ void RenderableGlobe::render(const RenderData& data, RendererTasks& rendererTask
     if (distanceToCamera < distance) {
         if (_hasRings && _ringsComponent.isEnabled()) {
             if (_shadowComponent.isEnabled()) {
+                
                 _shadowComponent.begin(data);
+                
                 renderChunks(data, rendererTask);
                 _ringsComponent.draw(data, RingsComponent::GeometryOnly);
 
                 _shadowComponent.end(data);
+                
                 renderChunks(data, rendererTask);
                 _ringsComponent.draw(
                     data,

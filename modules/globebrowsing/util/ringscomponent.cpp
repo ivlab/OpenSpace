@@ -340,6 +340,9 @@ namespace openspace {
         _shader->setUniform(_uniformCache.nightFactor, _nightFactor);
         _shader->setUniform(_uniformCache.sunPosition, _sunPosition);
         
+        // Adding the model transformation to the final shadow matrix so we have a 
+        // complete transformation from the model coordinates to the clip space of 
+        // the light position.
         _shader->setUniform("shadowMatrix", shadowData.shadowMatrix * modelTransform);
 
         ghoul::opengl::TextureUnit unit;
@@ -354,13 +357,12 @@ namespace openspace {
         _shader->setUniform("shadowMap", shadowMapUnit);
 
 
-        ghoul::opengl::TextureUnit shadowTextureUnit;
-        shadowTextureUnit.activate();
-        glBindTexture(GL_TEXTURE_2D, shadowData.positionInLightSpaceTexture);
-        _shader->setUniform("shadowPositionTexture", shadowTextureUnit);
-
-        // temp
-        _shader->setUniform("objectToLightSpaceMatrix", shadowData.worldToLightSpaceMatrix * modelTransform);
+        //// DEBUGGING
+        //ghoul::opengl::TextureUnit shadowTextureUnit;
+        //shadowTextureUnit.activate();
+        //glBindTexture(GL_TEXTURE_2D, shadowData.positionInLightSpaceTexture);
+        //_shader->setUniform("shadowPositionTexture", shadowTextureUnit);
+        //_shader->setUniform("objectToLightSpaceMatrix", shadowData.worldToLightSpaceMatrix * modelTransform);
 
         glDisable(GL_CULL_FACE);
 

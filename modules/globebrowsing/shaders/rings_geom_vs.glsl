@@ -24,7 +24,7 @@
 
 #version __CONTEXT__
 
-#include "PowerScaling/powerScaling_vs.hglsl"
+#include "PowerScaling/powerScalingMath.hglsl"
 
 layout(location = 0) in vec2 in_position;
 layout(location = 1) in vec2 in_st;
@@ -33,14 +33,13 @@ out vec2 vs_st;
 out vec4 vs_screenSpaceDepth;
 out vec4 vs_positionViewSpace;
 
-uniform dmat4 modelMatrix;
 uniform dmat4 modelViewMatrix;
 uniform dmat4 projectionMatrix;
 
 void main() {
     vs_st = in_st;
 
-    dvec4 positionViewSpace = modelViewMatrix * dvec4(in_position.xy, 1.0, 1.0);
+    dvec4 positionViewSpace = modelViewMatrix * dvec4(in_position, 0.0, 1.0);
     vec4 positionClipSpace = vec4(projectionMatrix * positionViewSpace);
     vec4 positionClipSpaceZNorm = z_normalization(positionClipSpace);
     

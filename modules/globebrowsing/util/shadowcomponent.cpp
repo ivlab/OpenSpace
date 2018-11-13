@@ -277,22 +277,21 @@ namespace openspace {
     }
 
     void ShadowComponent::begin(const RenderData& data) {
-
-        
+        // ===========================================
         // Builds light's ModelViewProjectionMatrix:
+        // ===========================================
         
-        // Camera matrix
         glm::dvec3 diffVector = glm::dvec3(_sunPosition) - data.modelTransform.translation;
         double originalLightDistance = glm::length(diffVector);
         glm::dvec3 lightDirection = glm::normalize(diffVector);
         
-        // Percentage of the original light source distance
-        double multiplier = originalLightDistance * (static_cast<double>(_distanceFraction)/100000.0);
+        // Percentage of the original light source distance (to avoid artifacts)
+        double multiplier = originalLightDistance * (static_cast<double>(_distanceFraction)/1.0E5);
         
         // New light source position
         glm::dvec3 lightPosition = data.modelTransform.translation + (lightDirection * multiplier);
        
-        // Saving current Camera parameters:
+        // Saving current Camera parameters
         Camera *camera = global::renderEngine.camera();
         _cameraPos = camera->positionVec3();
         _cameraFocus = camera->focusPositionVec3();
@@ -320,7 +319,7 @@ namespace openspace {
         //=============== Manually Created Camera Matrix ===================
         //==================================================================
         // camera Z
-        glm::dvec3 cameraZ = glm::normalize(lightDirection);
+        glm::dvec3 cameraZ = lightDirection;
         
         // camera X
         glm::dvec3 upVector = data.camera.lookUpVectorWorldSpace();
@@ -365,8 +364,11 @@ namespace openspace {
         //=======================================================================
         glm::dmat4 lightProjectionMatrix = glm::dmat4(camera->projectionMatrix());
         //glm::dmat4 lightProjectionMatrix = glm::ortho(-1000.0, 1000.0, -1000.0, 1000.0, 0.0010, 1000.0);
+        
+        // The model transformation missing in the final shadow matrix is add when rendering each
+        // object (using its transformations provided by the RenderData structure)
         _shadowData.shadowMatrix = 
-            //_toTextureCoordsMatrix * 
+            _toTextureCoordsMatrix * 
             lightProjectionMatrix * 
             camera->combinedViewMatrix();
 
@@ -421,6 +423,7 @@ namespace openspace {
             _executeDepthTextureSave = false;
         }
 
+        // Restores Camera Parameters
         Camera *camera = global::renderEngine.camera();
         camera->setPositionVec3(_cameraPos);
         camera->setFocusPositionVec3(_cameraFocus);
@@ -489,24 +492,24 @@ namespace openspace {
         glTexImage2D(
             GL_TEXTURE_2D,
             0,
-            GL_DEPTH_COMPONENT,
+            GL_DEPTH_COMPONENT32,
             _shadowDepthTextureWidth,
             _shadowDepthTextureHeight,
             0,
             GL_DEPTH_COMPONENT,
             GL_FLOAT,
-            nullptr
+            0
         );
         checkGLError("createDepthTexture() -- Depth testure created");
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        /*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, shadowBorder);*/
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, shadowBorder);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LESS);// GL_LEQUAL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
         checkGLError("createdDepthTexture");
 
         glGenTextures(1, &_positionInLightSpaceTexture);

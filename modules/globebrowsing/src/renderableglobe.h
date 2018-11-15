@@ -157,7 +157,8 @@ private:
      */
     float getHeight(const glm::dvec3& position) const;
 
-    void renderChunks(const RenderData& data, RendererTasks& rendererTask);
+    void renderChunks(const RenderData& data, RendererTasks& rendererTask, 
+        const bool renderGeomOnly = false);
 
     /**
      * Chunks can be rendered either globally or locally. Global rendering is performed
@@ -167,7 +168,8 @@ private:
      * point precision by doing this which means that the camera too close to a global
      * tile will lead to jagging. We only render global chunks for lower chunk levels.
      */
-    void renderChunkGlobally(const Chunk& chunk, const RenderData& data);
+    void renderChunkGlobally(const Chunk& chunk, const RenderData& data, 
+        const bool renderGeomOnly);
 
     /**
      * Local rendering of chunks are done using linear interpolation in camera space.
@@ -180,7 +182,8 @@ private:
      * levels) the better the approximation becomes. This is why we only render local
      * chunks for higher chunk levels.
      */
-    void renderChunkLocally(const Chunk& chunk, const RenderData& data);
+    void renderChunkLocally(const Chunk& chunk, const RenderData& data, 
+        const bool renderGeomOnly);
 
     void debugRenderChunk(const Chunk& chunk, const glm::dmat4& mvp,
         bool renderBounds, bool renderAABB) const;

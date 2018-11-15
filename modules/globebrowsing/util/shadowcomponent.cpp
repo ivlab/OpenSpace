@@ -492,7 +492,7 @@ namespace openspace {
         glTexImage2D(
             GL_TEXTURE_2D,
             0,
-            GL_DEPTH_COMPONENT32,
+            GL_DEPTH_COMPONENT32F,
             _shadowDepthTextureWidth,
             _shadowDepthTextureHeight,
             0,
@@ -548,12 +548,14 @@ namespace openspace {
 
         glGenFramebuffers(1, &_shadowFBO);
         glBindFramebuffer(GL_FRAMEBUFFER, _shadowFBO);
-        glFramebufferTexture(
+        glFramebufferTexture2D(
             GL_FRAMEBUFFER, 
             GL_DEPTH_ATTACHMENT, 
+            GL_TEXTURE_2D,
             _shadowDepthTexture, 
             0
         );
+
         glFramebufferTexture(
             GL_FRAMEBUFFER,
             GL_COLOR_ATTACHMENT3,

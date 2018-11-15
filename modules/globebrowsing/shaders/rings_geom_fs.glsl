@@ -55,15 +55,15 @@ Fragment getFragment() {
         
     // The normal for the one plane depends on whether we are dealing
     // with a front facing or back facing fragment
-    vec3 normal;
+    //vec3 normal;
     // The plane is oriented on the xz plane
     // WARNING: This might not be the case for Uranus
-    if (gl_FrontFacing) {
-        normal = vec3(-1.0, 0.0, 0.0);
-    }
-    else {
-        normal = vec3(1.0, 0.0, 0.0);
-    }
+    // if (gl_FrontFacing) {
+    //     normal = vec3(-1.0, 0.0, 0.0);
+    // }
+    // else {
+    //     normal = vec3(1.0, 0.0, 0.0);
+    // }
 
     Fragment frag;
     frag.color      = vec4(1.0);;

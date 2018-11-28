@@ -109,6 +109,13 @@ namespace {
         "Debug"
     };
 
+    constexpr openspace::properties::Property::PropertyInfo DistanceFractionInfo = {
+        "DistanceFraction",
+        "Distance Fraction",
+        "Distance fraction of original distance from light source to the globe to be "
+        "considered as the new light source distance."
+    };
+
     void checkFrameBufferState(const std::string& codePosition)
     {
         if (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
@@ -211,6 +218,12 @@ namespace openspace {
                     new DoubleVerifier,
                     Optional::Yes,
                     TransparencyInfo.description
+                },
+                {
+                    DistanceFractionInfo.identifier,
+                    new DoubleVerifier,
+                    Optional::Yes,
+                    DistanceFractionInfo.description
                 }
             }
         };
@@ -219,7 +232,7 @@ namespace openspace {
     ShadowComponent::ShadowComponent(const ghoul::Dictionary& dictionary)
         : properties::PropertyOwner({ "Shadows" })		
         , _saveDepthTexture(SaveDepthTextureInfo)
-        , _distanceFraction(SizeInfo, 10, 1, 100000)
+        , _distanceFraction(DistanceFractionInfo, 30, 1, 100000)
         , _enabled({ "Enabled", "Enabled", "Enable/Disable Shadows" }, true)
         , _shadowMapDictionary(dictionary)
         , _shadowDepthTextureHeight(1024)
@@ -236,8 +249,12 @@ namespace openspace {
     {
         using ghoul::filesystem::File;
 
-        if (dictionary.hasKey("Shadow")) {
-            dictionary.getValue("Shadow", _shadowMapDictionary);
+        if (dictionary.hasKey("Rings")) {
+            ghoul::Dictionary ringsDic;
+            dictionary.getValue("Rings", ringsDic);
+            if (ringsDic.hasKey("Shadows")) {
+                ringsDic.getValue("Shadows", _shadowMapDictionary);
+            }
         }
 
         documentation::testSpecificationAndThrow(
@@ -245,6 +262,12 @@ namespace openspace {
             _shadowMapDictionary,
             "ShadowComponent"
         );
+
+        if (_shadowMapDictionary.hasKey(DistanceFractionInfo.identifier)) {
+            _distanceFraction = static_cast<int>(
+                _shadowMapDictionary.value<float>(DistanceFractionInfo.identifier)
+                );
+        }
 
         _saveDepthTexture.onChange([&]() {
             _executeDepthTextureSave = true;

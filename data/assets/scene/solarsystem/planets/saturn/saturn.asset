@@ -45,6 +45,7 @@ local Saturn = {
             Offset = { 74500 / 140445.100671159, 1.0 }, -- min / max extend
             Shadows = {
                 Enabled = true,
+                DistanceFraction = 50.0
             } 
         }
 

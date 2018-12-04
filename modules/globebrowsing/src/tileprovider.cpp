@@ -131,8 +131,6 @@ namespace bylevelprovider {
 
 namespace temporal {
     constexpr const char* KeyBasePath = "BasePath";
-    constexpr const char* KeyPreCacheStartTime = "PreCacheStartTime";
-    constexpr const char* KeyPreCacheEndTime = "PreCacheEndTime";
 
     constexpr const char* UrlTimePlaceholder = "${OpenSpaceTimeId}";
     constexpr const char* TimeStart = "OpenSpaceTimeStart";
@@ -148,20 +146,6 @@ namespace temporal {
     };
 } // namespace temporal
 
-Type toType(const layergroupid::TypeID& id) {
-    using T = layergroupid::TypeID;
-    switch (id) {
-        case T::Unknown:                throw ghoul::MissingCaseException();
-        case T::DefaultTileLayer:       return Type::DefaultTileProvider;
-        case T::SingleImageTileLayer:   return Type::SingleImageTileProvider;
-        case T::SizeReferenceTileLayer: return Type::SizeReferenceTileProvider;
-        case T::TemporalTileLayer:      return Type::TemporalTileProvider;
-        case T::TileIndexTileLayer:     return Type::TileIndexTileProvider;
-        case T::ByIndexTileLayer:       return Type::ByIndexTileProvider;
-        case T::ByLevelTileLayer:       return Type::ByLevelTileProvider;
-        default:                        throw ghoul::MissingCaseException();
-    }
-}
 
 //
 // DefaultTileProvider
@@ -308,7 +292,7 @@ std::string timeStringify(TemporalTileProvider::TimeFormatType type, const Time&
 }
 
 std::unique_ptr<TileProvider> initTileProvider(TemporalTileProvider& t,
-                                               TemporalTileProvider::TimeKey timekey)
+                                             const TemporalTileProvider::TimeKey& timekey)
 {
     static const std::vector<std::string> IgnoredTokens = {
         // From: http://www.gdal.org/frmt_wms.html
@@ -585,8 +569,8 @@ SingleImageProvider::SingleImageProvider(const ghoul::Dictionary& dictionary)
 
 
 
-TextTileProvider::TextTileProvider(const TileTextureInitData& initData, size_t fontSize)
-    : initData(initData)
+TextTileProvider::TextTileProvider(TileTextureInitData initData, size_t fontSize)
+    : initData(std::move(initData))
     , fontSize(fontSize)
 {
     tileCache = global::moduleEngine.module<GlobeBrowsingModule>()->tileCache();
@@ -763,7 +747,7 @@ TileProviderByLevel::TileProviderByLevel(const ghoul::Dictionary& dictionary) {
 
 
 
-TemporalTileProvider::TemporalTileProvider(const ghoul::Dictionary& dictionary) 
+TemporalTileProvider::TemporalTileProvider(const ghoul::Dictionary& dictionary)
     : initDict(dictionary)
     , filePath(temporal::FilePathInfo)
 {
@@ -787,9 +771,9 @@ TemporalTileProvider::TemporalTileProvider(const ghoul::Dictionary& dictionary)
 bool initialize(TileProvider& tp) {
     ghoul_assert(!tp.isInitialized, "TileProvider can only be initialized once.");
 
-    tp.uniqueIdentifier = tp.NumTileProviders++;
-    if (tp.NumTileProviders == std::numeric_limits<unsigned int>::max()) {
-        --tp.NumTileProviders;
+    tp.uniqueIdentifier = TileProvider::NumTileProviders++;
+    if (TileProvider::NumTileProviders == std::numeric_limits<unsigned int>::max()) {
+        --TileProvider::NumTileProviders;
         return false;
     }
 
@@ -820,7 +804,7 @@ bool initialize(TileProvider& tp) {
             }
             return success;
         }
-        case Type::TemporalTileProvider: 
+        case Type::TemporalTileProvider:
             break;
         default:
             throw ghoul::MissingCaseException();

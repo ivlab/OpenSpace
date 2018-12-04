@@ -66,28 +66,40 @@ void KeybindingManager::resetKeyBindings() {
     _keyLua.clear();
 }
 
-void KeybindingManager::bindKeyLocal(Key key, KeyModifier modifier,
-                                     std::string luaCommand, std::string documentation)
+void KeybindingManager::bindKeyLocal(Key key,
+                                     KeyModifier modifier,
+                                     std::string luaCommand,
+                                     std::string documentation,
+                                     std::string name,
+                                     std::string guiPath)
 {
     _keyLua.insert({
         { key, modifier },
         {
             std::move(luaCommand),
             IsSynchronized::No,
-            std::move(documentation)
+            std::move(documentation),
+            std::move(name),
+            std::move(guiPath)
         }
     });
 }
 
-void KeybindingManager::bindKey(Key key, KeyModifier modifier,
-                                std::string luaCommand, std::string documentation)
+void KeybindingManager::bindKey(Key key,
+                                KeyModifier modifier,
+                                std::string luaCommand,
+                                std::string documentation,
+                                std::string name,
+                                std::string guiPath)
 {
     _keyLua.insert({
         { key, modifier },
         {
             std::move(luaCommand),
             IsSynchronized::Yes,
-            std::move(documentation)
+            std::move(documentation),
+            std::move(name),
+            std::move(guiPath)
         }
     });
 }
@@ -139,11 +151,12 @@ std::string KeybindingManager::generateJson() const {
         }
         first = false;
         json << "{";
-        json << "\"key\": \"" << ghoul::to_string(p.first) << "\",";
-        json << "\"script\": \"" << escapedJson(p.second.command) << "\",";
-        json << "\"remoteScripting\": "
+        json << R"("key": ")" << ghoul::to_string(p.first) << "\",";
+        json << R"("script": ")" << escapedJson(p.second.command) << "\",";
+        json << R"("remoteScripting: ")"
              << (p.second.synchronization ? "true," : "false,");
-        json << "\"documentation\": \"" << escapedJson(p.second.documentation) << "\"";
+        json << R"("documentation": ")" << escapedJson(p.second.documentation) << "\",";
+        json << R"("name: ")" << escapedJson(p.second.name) << "\"";
         json << "}";
     }
     json << "]";

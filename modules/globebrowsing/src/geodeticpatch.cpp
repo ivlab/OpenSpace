@@ -34,7 +34,7 @@ namespace {
 
         // this will cause angle to be in value range ]-2pi, 2pi[
         angle = fmod(angle, glm::two_pi<double>());
-    
+
         // ensure _radians are positive, ie in value range [0, 2pi[
         if (angle < 0.0) {
             angle += glm::two_pi<double>();
@@ -157,10 +157,10 @@ Geodetic2 GeodeticPatch::clamp(const Geodetic2& p) const {
     double pointLat = normalizedAngleAround(p.lat, _center.lat);
     double pointLon = normalizedAngleAround(p.lon, _center.lon);
 
-    Geodetic2 res;
-    res.lat = glm::clamp(pointLat, minLat(), maxLat());
-    res.lon = glm::clamp(pointLon, minLon(), maxLon());
-    return res;
+    return {
+        glm::clamp(pointLat, minLat(), maxLat()),
+        glm::clamp(pointLon, minLon(), maxLon())
+    };
 }
 
 Geodetic2 GeodeticPatch::closestCorner(const Geodetic2& p) const {

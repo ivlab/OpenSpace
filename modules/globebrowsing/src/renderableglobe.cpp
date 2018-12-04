@@ -41,7 +41,10 @@
 #include <ghoul/filesystem/filesystem.h>
 #include <ghoul/logging/logmanager.h>
 #include <ghoul/opengl/texture.h>
+#include <ghoul/opengl/textureunit.h>
 #include <ghoul/opengl/programobject.h>
+#include <ghoul/systemcapabilities/openglcapabilitiescomponent.h>
+#include <numeric>
 #include <queue>
 
 namespace {
@@ -80,7 +83,7 @@ namespace {
     // them at a cutoff level, and I think this might still be the best solution for the
     // time being.  --abock  2018-10-30
     constexpr const int DefaultSkirtedGridSegments = 64;
-    constexpr static const int UnknownDesiredLevel = -1;
+    constexpr const int UnknownDesiredLevel = -1;
 
     const openspace::globebrowsing::GeodeticPatch Coverage =
         openspace::globebrowsing::GeodeticPatch(0, 0, 90, 180);
@@ -179,6 +182,13 @@ namespace {
         "OrenNayarRoughness",
         "orenNayarRoughness",
         "" // @TODO Missing documentation
+    };
+
+    constexpr openspace::properties::Property::PropertyInfo NActiveLayersInfo = {
+        "NActiveLayers",
+        "Number of active layers",
+        "This is the number of currently active layers, if this value reaches the "
+        "maximum, bad things will happen."
     };
 } // namespace
 
@@ -375,6 +385,7 @@ bool intersects(const AABB3& bb, const AABB3& o) {
 Chunk::Chunk(const TileIndex& ti)
     : tileIndex(ti)
     , surfacePatch(ti)
+    , status(Status::DoNothing)
 {}
 
 RenderableGlobe::RenderableGlobe(const ghoul::Dictionary& dictionary)
@@ -396,17 +407,16 @@ RenderableGlobe::RenderableGlobe(const ghoul::Dictionary& dictionary)
         BoolProperty(EclipseHardShadowsInfo, false),
         FloatProperty(LodScaleFactorInfo, 15.f, 1.f, 50.f),
         FloatProperty(CameraMinHeightInfo, 100.f, 0.f, 1000.f),
-        FloatProperty(OrenNayarRoughnessInfo, 0.f, 0.f, 1.f)
+        FloatProperty(OrenNayarRoughnessInfo, 0.f, 0.f, 1.f),
+        IntProperty(NActiveLayersInfo, 0, 0, OpenGLCap.maxTextureUnits() / 3)
     })
     , _debugPropertyOwner({ "Debug" })
+    , _grid(DefaultSkirtedGridSegments, DefaultSkirtedGridSegments)
     , _leftRoot(Chunk(LeftHemisphereIndex))
     , _rightRoot(Chunk(RightHemisphereIndex))
     , _ringsComponent(dictionary)
     , _shadowComponent(dictionary)
-    , _grid(DefaultSkirtedGridSegments, DefaultSkirtedGridSegments)
 {
-    setIdentifier("RenderableGlobe");
-
     // Read the radii in to its own dictionary
     if (dictionary.hasKeyAndValue<glm::dvec3>(KeyRadii)) {
         _ellipsoid = Ellipsoid(dictionary.value<glm::vec3>(KeyRadii));
@@ -438,6 +448,8 @@ RenderableGlobe::RenderableGlobe(const ghoul::Dictionary& dictionary)
     addProperty(_generalProperties.lodScaleFactor);
     addProperty(_generalProperties.cameraMinHeight);
     addProperty(_generalProperties.orenNayarRoughness);
+    _generalProperties.nActiveLayers.setReadOnly(true);
+    addProperty(_generalProperties.nActiveLayers);
 
     _debugPropertyOwner.addProperty(_debugProperties.showChunkEdges);
     _debugPropertyOwner.addProperty(_debugProperties.showChunkBounds);
@@ -461,9 +473,11 @@ RenderableGlobe::RenderableGlobe(const ghoul::Dictionary& dictionary)
     _debugProperties.showHeightResolution.onChange(notifyShaderRecompilation);
     _debugProperties.showHeightIntensities.onChange(notifyShaderRecompilation);
 
-    _layerManager.onChange([&]() {
+    _layerManager.onChange([&](Layer* l) {
         _shadersNeedRecompilation = true;
         _chunkCornersDirty = true;
+        _nLayersIsDirty = true;
+        _lastChangedLayer = l;
     });
 
     addPropertySubOwner(_debugPropertyOwner);
@@ -609,32 +623,60 @@ void RenderableGlobe::render(const RenderData& data, RendererTasks& rendererTask
     const double distance = res * boundingSphere() / tfov;
 
     if (distanceToCamera < distance) {
-        if (_hasRings && _ringsComponent.isEnabled()) {
-            if (_shadowComponent.isEnabled()) {
-                
-                _shadowComponent.begin(data);
-                
-                renderChunks(data, rendererTask, true);
-                _ringsComponent.draw(data, RingsComponent::GeometryOnly);
-
-                _shadowComponent.end(data);
-                
-                renderChunks(data, rendererTask);
-                _ringsComponent.draw(
-                    data,
-                    RingsComponent::GeometryAndShading,
-                    _shadowComponent.shadowMapData()
-                );
+        try {
+            if (_hasRings && _ringsComponent.isEnabled()) {
+                if (_shadowComponent.isEnabled()) {
+                    _shadowComponent.begin(data);
+              
+                    renderChunks(data, rendererTask, true);
+                    _ringsComponent.draw(data, RingsComponent::GeometryOnly);
+              
+                    _shadowComponent.end(data);
+              
+                      renderChunks(data, rendererTask);
+                    _ringsComponent.draw(
+                        data, RingsComponent::GeometryAndShading,
+                        _shadowComponent.shadowMapData()
+                    );
+                }
+                else {
+                  renderChunks(data, rendererTask);
+                  _ringsComponent.draw(data, RingsComponent::GeometryAndShading);
+                }
             }
             else {
                 renderChunks(data, rendererTask);
-                _ringsComponent.draw(data, RingsComponent::GeometryAndShading);
             }
         }
-        else {
-            renderChunks(data, rendererTask);
+        catch (const ghoul::opengl::TextureUnit::TextureUnitError&) {
+            std::string layer = _lastChangedLayer ?
+                _lastChangedLayer->guiName() :
+                "";
+
+            LWARNINGC(
+                guiName(),
+                layer.empty() ?
+                "Too many layers enabled" :
+                "Too many layers enabled, disabling layer: " + layer
+            );
+
+            // We bailed out in the middle of the rendering, so some TextureUnits are
+            // still bound and we would fail in some next render function for sure
+            for (GPULayerGroup& l : _globalRenderer.gpuLayerGroups) {
+                l.deactivate();
+            }
+
+            for (GPULayerGroup& l : _localRenderer.gpuLayerGroups) {
+                l.deactivate();
+            }
+
+            if (_lastChangedLayer) {
+                _lastChangedLayer->setEnabled(false);
+            }
         }
     }
+
+    _lastChangedLayer = nullptr;
 }
 
 void RenderableGlobe::update(const UpdateData& data) {
@@ -657,6 +699,20 @@ void RenderableGlobe::update(const UpdateData& data) {
         _debugProperties.resetTileProviders = false;
     }
     _layerManager.update();
+
+    if (_nLayersIsDirty) {
+        std::array<LayerGroup*, LayerManager::NumLayerGroups> lgs =
+            _layerManager.layerGroups();
+        _generalProperties.nActiveLayers = std::accumulate(
+            lgs.begin(),
+            lgs.end(),
+            0,
+            [](int lhs, LayerGroup* lg) {
+                return lhs + static_cast<int>(lg->activeLayers().size());
+            }
+        );
+        _nLayersIsDirty = false;
+    }
 
     _ringsComponent.update(data);
     _shadowComponent.update(data);
@@ -682,7 +738,8 @@ const glm::dmat4& RenderableGlobe::modelTransform() const {
 //  Rendering code
 //////////////////////////////////////////////////////////////////////////////////////////
 
-void RenderableGlobe::renderChunks(const RenderData& data, RendererTasks&, const bool renderGeomOnly) {
+void RenderableGlobe::renderChunks(const RenderData& data, RendererTasks&, 
+    const bool renderGeomOnly) {
     if (_shadersNeedRecompilation) {
         recompileShaders();
     }
@@ -996,7 +1053,8 @@ void RenderableGlobe::renderChunkGlobally(const Chunk& chunk, const RenderData& 
     }
 }
 
-void RenderableGlobe::renderChunkLocally(const Chunk& chunk, const RenderData& data, const bool renderGeomOnly) {
+void RenderableGlobe::renderChunkLocally(const Chunk& chunk, const RenderData& data, 
+    const bool renderGeomOnly) {
     //PerfMeasure("locally");
     const TileIndex& tileIndex = chunk.tileIndex;
     ghoul::opengl::ProgramObject& program = *_localRenderer.program;
@@ -1285,7 +1343,6 @@ void RenderableGlobe::recompileShaders() {
 
     // Different layer types can be height layers or color layers for example.
     // These are used differently within the shaders.
-    preprocessingData.layeredTextureInfo;
 
     for (size_t i = 0; i < preprocessingData.layeredTextureInfo.size(); i++) {
         // lastLayerIndex must be at least 0 for the shader to compile,
@@ -1456,9 +1513,7 @@ SurfacePositionHandle RenderableGlobe::calculateSurfacePositionHandle(
     };
 }
 
-
-
-bool RenderableGlobe::testIfCullable(const Chunk& chunk, 
+bool RenderableGlobe::testIfCullable(const Chunk& chunk,
                                      const RenderData& renderData) const
 {
     return (PreformHorizonCulling && isCullableByHorizon(chunk, renderData)) ||
@@ -1500,7 +1555,7 @@ float RenderableGlobe::getHeight(const glm::dvec3& position) const {
     const double v = 0.25 - geodeticPosition.lat / glm::two_pi<double>();
     const double xIndexSpace = u * numIndicesAtLevel;
     const double yIndexSpace = v * numIndicesAtLevel;
- 
+
     const int x = static_cast<int>(floor(xIndexSpace));
     const int y = static_cast<int>(floor(yIndexSpace));
 
@@ -1874,7 +1929,8 @@ int RenderableGlobe::desiredLevelByProjectedArea(const Chunk& chunk,
     const double areaABC = 0.5 * glm::length(glm::cross(AC, AB));
     const double projectedChunkAreaApprox = 8 * areaABC;
 
-    const double scaledArea = _generalProperties.lodScaleFactor * projectedChunkAreaApprox;
+    const double scaledArea = _generalProperties.lodScaleFactor *
+                              projectedChunkAreaApprox;
     return chunk.tileIndex.level + static_cast<int>(round(scaledArea - 1));
 }
 

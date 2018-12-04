@@ -51,9 +51,9 @@ namespace {
     };
 
     void gdalErrorHandler(CPLErr eErrClass, int, const char* msg) {
-        // No need to try to do this check earlier and only install this method as an error
-        // handler if the logging is desired as the default behavior of GDAL is to log errors
-        // to stderr.
+        // No need to try to do this check earlier and only install this method as an
+        // error handler if the logging is desired as the default behavior of GDAL is to
+        // log errors to stderr.
         if (openspace::globebrowsing::GdalWrapper::ref().logGdalErrors()) {
             switch (eErrClass) {
                 case CE_None: break;
@@ -116,6 +116,7 @@ GdalWrapper::GdalWrapper(size_t maximumCacheSize, size_t maximumMaximumCacheSize
     CPLSetConfigOption("GDAL_HTTP_UNSAFESSL", "YES");
 
     CPLSetConfigOption("GDAL_HTTP_TIMEOUT", "3"); // 3 seconds
+    CPLSetConfigOption("CURLOPT_TIMEOUT", "3"); // 3 seconds
 
     setGdalProxyConfiguration();
     CPLSetErrorHandler(gdalErrorHandler);

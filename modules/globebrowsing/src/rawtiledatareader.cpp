@@ -24,8 +24,13 @@
 
 #include <modules/globebrowsing/src/rawtiledatareader.h>
 
+#include <modules/globebrowsing/globebrowsingmodule.h>
 #include <modules/globebrowsing/src/geodeticpatch.h>
+#include <openspace/engine/globals.h>
+#include <openspace/engine/moduleengine.h>
 #include <ghoul/fmt.h>
+#include <ghoul/filesystem/file.h>
+#include <ghoul/filesystem/filesystem.h>
 #include <ghoul/logging/logmanager.h>
 #include <ghoul/misc/exception.h>
 
@@ -46,10 +51,68 @@
 #endif // _MSC_VER
 
 #include <algorithm>
+#include <fstream>
 
 namespace openspace::globebrowsing {
 
 namespace {
+
+// These are some locations in memory taken from ESRI's No Data Available tile so that we
+// can spotcheck these tiles and not present them
+// The pair is <byte index, expected value>
+struct MemoryLocation {
+    int offset;
+    std::byte value;
+};
+
+// The memory locations are grouped to be mostly cache-aligned
+constexpr std::array<MemoryLocation, 42> NoDataAvailableData = {
+    MemoryLocation{ 296380, std::byte(205) },
+    MemoryLocation{ 296381, std::byte(205) },
+    MemoryLocation{ 296382, std::byte(205) },
+    MemoryLocation{ 296383, std::byte(255) },
+    MemoryLocation{ 296384, std::byte(224) },
+    MemoryLocation{ 296385, std::byte(224) },
+    MemoryLocation{ 296386, std::byte(224) },
+    MemoryLocation{ 296387, std::byte(255) },
+    MemoryLocation{ 296388, std::byte(244) },
+    MemoryLocation{ 296389, std::byte(244) },
+    MemoryLocation{ 296390, std::byte(244) },
+    MemoryLocation{ 296391, std::byte(255) },
+
+    MemoryLocation{ 269840, std::byte(209) },
+    MemoryLocation{ 269841, std::byte(209) },
+    MemoryLocation{ 269842, std::byte(209) },
+    MemoryLocation{ 269844, std::byte(203) },
+    MemoryLocation{ 269845, std::byte(203) },
+    MemoryLocation{ 269846, std::byte(203) },
+    MemoryLocation{ 269852, std::byte(221) },
+    MemoryLocation{ 269853, std::byte(221) },
+    MemoryLocation{ 269854, std::byte(221) },
+    MemoryLocation{ 269856, std::byte(225) },
+    MemoryLocation{ 269857, std::byte(225) },
+    MemoryLocation{ 269858, std::byte(225) },
+    MemoryLocation{ 269860, std::byte(218) },
+    MemoryLocation{ 269861, std::byte(218) },
+
+    MemoryLocation{ 240349, std::byte(203) },
+    MemoryLocation{ 240350, std::byte(203) },
+    MemoryLocation{ 240352, std::byte(205) },
+    MemoryLocation{ 240353, std::byte(204) },
+    MemoryLocation{ 240354, std::byte(205) },
+
+    MemoryLocation{ 0, std::byte(204) },
+    MemoryLocation{ 7, std::byte(255) },
+    MemoryLocation{ 520, std::byte(204) },
+    MemoryLocation{ 880, std::byte(204) },
+    MemoryLocation{ 883, std::byte(255) },
+    MemoryLocation{ 91686, std::byte(204) },
+    MemoryLocation{ 372486, std::byte(204) },
+    MemoryLocation{ 670483, std::byte(255) },
+    MemoryLocation{ 231684, std::byte(202) },
+    MemoryLocation{ 232092, std::byte(202) },
+    MemoryLocation{ 235921, std::byte(203) },
+};
 
 enum class Side {
     Left = 0,
@@ -238,9 +301,6 @@ bool isInside(const PixelRegion& lhs, const PixelRegion& rhs) {
 }
 
 IODescription cutIODescription(IODescription& io, Side side, int pos) {
-    const PixelRegion readPreCut = io.read.region;
-    const PixelRegion writePreCut = io.write.region;
-
     glm::dvec2 ratio = {
         io.write.region.numPixels.x / static_cast<double>(io.read.region.numPixels.x),
         io.write.region.numPixels.y / static_cast<double>(io.read.region.numPixels.y)
@@ -271,14 +331,14 @@ std::array<double, 6> geoTransform(int rasterX, int rasterY) {
         Geodetic2{ 0.0, 0.0 },
         Geodetic2{ glm::half_pi<double>(), glm::pi<double>() }
     );
-    std::array<double, 6> res;
-    res[0] = glm::degrees(cov.corner(Quad::NORTH_WEST).lon);
-    res[1] = glm::degrees(cov.size().lon) / rasterX;
-    res[2] = 0.0;
-    res[3] = glm::degrees(cov.corner(Quad::NORTH_WEST).lat);
-    res[4] = 0.0;
-    res[5] = glm::degrees(-cov.size().lat) / rasterY;
-    return res;
+    return {
+        glm::degrees(cov.corner(Quad::NORTH_WEST).lon),
+        glm::degrees(cov.size().lon) / rasterX,
+        0.0,
+        glm::degrees(cov.corner(Quad::NORTH_WEST).lat),
+        0.0,
+        glm::degrees(-cov.size().lat) / rasterY
+    };
 }
 
 /**
@@ -362,9 +422,9 @@ RawTile::ReadError postProcessErrorCheck(const RawTile& rawTile, size_t nRasters
 RawTileDataReader::RawTileDataReader(std::string filePath,
                                      TileTextureInitData initData,
                                      PerformPreprocessing preprocess)
-    : _initData(std::move(initData))
+    : _datasetFilePath(std::move(filePath))
+    , _initData(std::move(initData))
     , _preprocess(preprocess)
-    , _datasetFilePath(std::move(filePath))
 {
     initialize();
 }
@@ -381,7 +441,73 @@ void RawTileDataReader::initialize() {
     if (_datasetFilePath.empty()) {
         throw ghoul::RuntimeError("File path must not be empty");
     }
-    _dataset = static_cast<GDALDataset*>(GDALOpen(_datasetFilePath.c_str(), GA_ReadOnly));
+
+    GlobeBrowsingModule& module = *global::moduleEngine.module<GlobeBrowsingModule>();
+
+    std::string content = _datasetFilePath;
+    if (module.isCachingEnabled() && FileSys.fileExists(_datasetFilePath)) {
+        // Only replace the 'content' if the dataset is an XML file and we want to do
+        // caching
+        std::ifstream t(_datasetFilePath);
+        std::string c(
+            (std::istreambuf_iterator<char>(t)),
+            std::istreambuf_iterator<char>()
+        );
+
+        if (c.size() > 10 && c.substr(0, 10) == "<GDAL_WMS>") {
+            // We know that _datasetFilePath is an XML file, so now we add a Cache line
+            // into it iff there isn't already one in the XML and if the configuration
+            // says we should
+
+            // 1. Parse XML
+            // 2. Inject Cache tag if it isn't already there
+            // 3. Serialize XML to pass into GDAL
+
+            LDEBUGC(_datasetFilePath, "Inserting caching tag");
+
+            bool shouldSerializeXml = false;
+
+            CPLXMLNode* root = CPLParseXMLString(c.c_str());
+            CPLXMLNode* cache = CPLSearchXMLNode(root, "Cache");
+            if (!cache) {
+                // If there already is a cache, we don't want to modify it
+                cache = CPLCreateXMLNode(root, CXT_Element, "Cache");
+
+                CPLCreateXMLElementAndValue(
+                    cache,
+                    "Path",
+                    absPath(module.cacheLocation()).c_str()
+                );
+                CPLCreateXMLElementAndValue(cache, "Depth", "4");
+                CPLCreateXMLElementAndValue(cache, "Expires", "315576000"); // 10 years
+                CPLCreateXMLElementAndValue(
+                    cache,
+                    "MaxSize",
+                    std::to_string(module.cacheSize()).c_str()
+                );
+
+                // The serialization only needs to be one if the cache didn't exist
+                // already
+                shouldSerializeXml = true;
+            }
+
+            if (module.isInOfflineMode()) {
+                CPLXMLNode* offlineMode = CPLSearchXMLNode(root, "OfflineMode");
+                if (!offlineMode) {
+                    CPLCreateXMLElementAndValue(root, "OfflineMode", "true");
+                    shouldSerializeXml = true;
+                }
+            }
+
+
+            if (shouldSerializeXml) {
+                content = std::string(CPLSerializeXMLTree(root));
+                //CPLSerializeXMLTreeToFile(root, (_datasetFilePath + ".xml").c_str());
+            }
+        }
+    }
+
+    _dataset = static_cast<GDALDataset*>(GDALOpen(content.c_str(), GA_ReadOnly));
     if (!_dataset) {
         throw ghoul::RuntimeError("Failed to load dataset: " + _datasetFilePath);
     }
@@ -509,6 +635,17 @@ RawTile RawTileDataReader::readTileData(TileIndex tileIndex) const {
     IODescription io = ioDescription(tileIndex);
     RawTile::ReadError worstError = RawTile::ReadError::None;
     readImageData(io, worstError, reinterpret_cast<char*>(rawTile.imageData.get()));
+
+    for (const MemoryLocation& ml : NoDataAvailableData) {
+        std::byte* ptr = rawTile.imageData.get();
+        if (ml.offset >= numBytes || ptr[ml.offset] != ml.value) {
+            // Bail out as early as possible
+            break;
+        }
+
+        // If we got here, we have (most likely) a No data yet available tile
+        worstError = RawTile::ReadError::Failure;
+    }
 
     rawTile.error = worstError;
     rawTile.tileIndex = std::move(tileIndex);

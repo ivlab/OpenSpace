@@ -89,7 +89,7 @@ public:
     void update(const UpdateData& data) override;
 
     SurfacePositionHandle calculateSurfacePositionHandle(
-        const glm::dvec3& targetModelSpace) const;
+        const glm::dvec3& targetModelSpace) const override;
 
     const Ellipsoid& ellipsoid() const;
     const LayerManager& layerManager() const;
@@ -119,6 +119,7 @@ private:
         properties::FloatProperty lodScaleFactor;
         properties::FloatProperty cameraMinHeight;
         properties::FloatProperty orenNayarRoughness;
+        properties::IntProperty nActiveLayers;
     } _generalProperties;
 
     properties::PropertyOwner _debugPropertyOwner;
@@ -236,7 +237,7 @@ private:
     struct {
         std::unique_ptr<ghoul::opengl::ProgramObject> program;
         bool updatedSinceLastCall = false;
-        UniformCache(skirtLength, p01, p11, p00, p10, patchNormalModelSpace, 
+        UniformCache(skirtLength, p01, p11, p00, p10, patchNormalModelSpace,
             patchNormalCameraSpace) uniformCache;
 
         std::array<GPULayerGroup, LayerManager::NumLayerGroups> gpuLayerGroups;
@@ -250,6 +251,8 @@ private:
     bool _shadersNeedRecompilation = true;
     bool _lodScaleFactorDirty = true;
     bool _chunkCornersDirty = true;
+    bool _nLayersIsDirty = true;
+    Layer* _lastChangedLayer = nullptr;
 };
 
 } // namespace openspace::globebrowsing

@@ -37,6 +37,7 @@
 #include <openspace/engine/virtualpropertymanager.h>
 #include <openspace/engine/windowdelegate.h>
 #include <openspace/interaction/keybindingmanager.h>
+#include <openspace/interaction/sessionrecording.h>
 #include <openspace/interaction/navigationhandler.h>
 #include <openspace/network/networkengine.h>
 #include <openspace/network/parallelpeer.h>
@@ -72,6 +73,7 @@
 #include <ghoul/logging/consolelog.h>
 #include <ghoul/logging/logmanager.h>
 #include <ghoul/logging/visualstudiooutputlog.h>
+#include <ghoul/misc/stringconversion.h>
 #include <ghoul/opengl/debugcontext.h>
 #include <ghoul/opengl/shaderpreprocessor.h>
 #include <ghoul/opengl/texture.h>
@@ -222,7 +224,7 @@ void OpenSpaceEngine::initialize() {
         ghoul::logging::LogManager::deinitialize();
     }
 
-    ghoul::logging::LogLevel level = ghoul::logging::levelFromString(
+    ghoul::logging::LogLevel level = ghoul::from_string<ghoul::logging::LogLevel>(
         global::configuration.logging.level
     );
     bool immediateFlush = global::configuration.logging.forceImmediateFlush;
@@ -288,6 +290,20 @@ void OpenSpaceEngine::initialize() {
     LDEBUG("Registering Lua libraries");
     registerCoreClasses(global::scriptEngine);
 
+    // Set up asset loader
+    std::unique_ptr<SynchronizationWatcher> w =
+        std::make_unique<SynchronizationWatcher>();
+    SynchronizationWatcher* rawWatcher = w.get();
+
+    global::openSpaceEngine._assetManager = std::make_unique<AssetManager>(
+        std::make_unique<AssetLoader>(
+            *global::scriptEngine.luaState(),
+            rawWatcher,
+            FileSys.absPath("${ASSETS}")
+        ),
+        std::move(w)
+    );
+
     global::scriptEngine.addLibrary(global::openSpaceEngine._assetManager->luaLibrary());
 
     for (OpenSpaceModule* module : global::moduleEngine.modules()) {
@@ -311,20 +327,6 @@ void OpenSpaceEngine::initialize() {
     for (const std::function<void()>& func : global::callback::initialize) {
         func();
     }
-
-    // Set up asset loader
-    std::unique_ptr<SynchronizationWatcher> w =
-        std::make_unique<SynchronizationWatcher>();
-    SynchronizationWatcher* rawWatcher = w.get();
-
-    global::openSpaceEngine._assetManager = std::make_unique<AssetManager>(
-        std::make_unique<AssetLoader>(
-            *global::scriptEngine.luaState(),
-            rawWatcher,
-            FileSys.absPath("${ASSETS}")
-        ),
-        std::move(w)
-    );
 
     global::openSpaceEngine._assetManager->initialize();
     scheduleLoadSingleAsset(global::configuration.asset);
@@ -549,8 +551,8 @@ void OpenSpaceEngine::initializeGL() {
 
     if (global::configuration.isLoggingOpenGLCalls) {
         using namespace ghoul::logging;
-        LogLevel level = levelFromString(global::configuration.logging.level);
-        if (level > LogLevel::Trace) {
+        LogLevel lvl = ghoul::from_string<LogLevel>(global::configuration.logging.level);
+        if (lvl > LogLevel::Trace) {
             LWARNING(
                 "Logging OpenGL calls is enabled, but the selected log level does "
                 "not include TRACE, so no OpenGL logs will be printed");
@@ -785,6 +787,7 @@ void OpenSpaceEngine::deinitialize() {
             global::renderEngine.scene()->camera()->getSyncables()
         );
     }
+    global::sessionRecording.deinitialize();
 
     global::deinitialize();
 
@@ -931,6 +934,8 @@ void OpenSpaceEngine::writeSceneDocumentation() {
 void OpenSpaceEngine::preSynchronization() {
     LTRACE("OpenSpaceEngine::preSynchronization(begin)");
 
+    //std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
     std::unique_ptr<performance::PerformanceMeasurement> perf;
     if (global::performanceManager.isEnabled()) {
         perf = std::make_unique<performance::PerformanceMeasurement>(
@@ -972,6 +977,7 @@ void OpenSpaceEngine::preSynchronization() {
         global::renderEngine.updateScene();
         //_navigationHandler->updateCamera(dt);
 
+
         if (_scene) {
             Camera* camera = _scene->camera();
             if (camera) {
@@ -979,6 +985,7 @@ void OpenSpaceEngine::preSynchronization() {
                 camera->invalidateCache();
             }
         }
+        global::sessionRecording.preSynchronization();
         global::parallelPeer.preSynchronization();
     }
 
@@ -1337,9 +1344,8 @@ scripting::LuaLibrary OpenSpaceEngine::luaLibrary() {
     };
 }
 
-LoadingScreen& OpenSpaceEngine::loadingScreen() {
-    ghoul_assert(_loadingScreen, "Loading Screen must not be nullptr");
-    return *_loadingScreen;
+LoadingScreen* OpenSpaceEngine::loadingScreen() {
+    return _loadingScreen.get();
 }
 
 AssetManager& OpenSpaceEngine::assetManager() {

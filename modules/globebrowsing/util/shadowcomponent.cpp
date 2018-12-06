@@ -65,44 +65,7 @@
 
 namespace {
     constexpr const char* _loggerCat = "ShadowComponent";
-
-    constexpr openspace::properties::Property::PropertyInfo TextureInfo = {
-        "Texture",
-        "Texture",
-        "This value is the path to a texture on disk that contains a one-dimensional "
-        "texture which is used for these rings."
-    };
-
-    constexpr openspace::properties::Property::PropertyInfo SizeInfo = {
-        "Size",
-        "Size",
-        "This value specifies the radius of the rings in meter."
-    };
-
-    constexpr openspace::properties::Property::PropertyInfo OffsetInfo = {
-        "Offset",
-        "Offset",
-        "This value is used to limit the width of the rings.Each of the two values is a "
-        "value between 0 and 1, where 0 is the center of the ring and 1 is the maximum "
-        "extent at the radius. If this value is, for example {0.5, 1.0}, the ring is "
-        "only shown between radius/2 and radius. It defaults to {0.0, 1.0}."
-    };
-
-    constexpr openspace::properties::Property::PropertyInfo NightFactorInfo = {
-        "NightFactor",
-        "Night Factor",
-        "This value is a multiplicative factor that is applied to the side of the rings "
-        "that is facing away from the Sun. If this value is equal to '1', no darkening "
-        "of the night side occurs."
-    };
-
-    constexpr openspace::properties::Property::PropertyInfo TransparencyInfo = {
-        "Transparency",
-        "Transparency",
-        "This value determines the transparency of part of the rings depending on the "
-        "color values. For this value v, the transparency is equal to length(color) / v."
-    };
-
+    
     constexpr openspace::properties::Property::PropertyInfo SaveDepthTextureInfo = {
         "SaveDepthTextureInfo",
         "Save Depth Texture",
@@ -186,39 +149,9 @@ namespace openspace {
     documentation::Documentation ShadowComponent::Documentation() {
         using namespace documentation;
         return {
-            "Rings Component",
-            "globebrowsing_rings_component",
+            "ShadowsRing Component",
+            "globebrowsing_shadows_component",
             {
-                {
-                    TextureInfo.identifier,
-                    new StringVerifier,
-                    Optional::Yes,
-                    TextureInfo.description
-                },
-                {
-                    SizeInfo.identifier,
-                    new DoubleVerifier,
-                    Optional::Yes,
-                    SizeInfo.description
-                },
-                {
-                    OffsetInfo.identifier,
-                    new DoubleVector2Verifier,
-                    Optional::Yes,
-                    OffsetInfo.description
-                },
-                {
-                    NightFactorInfo.identifier,
-                    new DoubleVerifier,
-                    Optional::Yes,
-                    NightFactorInfo.description
-                },
-                {
-                    TransparencyInfo.identifier,
-                    new DoubleVerifier,
-                    Optional::Yes,
-                    TransparencyInfo.description
-                },
                 {
                     DistanceFractionInfo.identifier,
                     new DoubleVerifier,
@@ -432,8 +365,6 @@ namespace openspace {
         glPolygonOffset(2.5f, 10.0f);
         checkGLError("begin() -- set values for polygon offset");*/
 
-        
-
         checkGLError("begin() finished");
         
     }
@@ -605,43 +536,6 @@ namespace openspace {
 
     void ShadowComponent::saveDepthBuffer() {
         int size = _shadowDepthTextureWidth * _shadowDepthTextureHeight;
-        /*GLuint * buffer = new GLuint[size];
-        
-        glReadPixels(
-            0,
-            0,
-            _shadowDepthTextureWidth,
-            _shadowDepthTextureHeight,
-            GL_DEPTH_COMPONENT,
-            GL_UNSIGNED_INT,
-            buffer
-        );
-
-        checkGLError("readDepthBuffer To buffer");
-        std::fstream ppmFile;
-
-        ppmFile.open("depthBufferShadowMapping.ppm", std::fstream::out);
-        if (ppmFile.is_open()) {
-
-            ppmFile << "P3" << std::endl;
-            ppmFile << _shadowDepthTextureWidth << " " << _shadowDepthTextureHeight << std::endl;
-            ppmFile << "255" << std::endl;
-            
-            std::cout << "\n\nTexture saved to file depthBufferShadowMapping.ppm\n\n";
-            int k = 0;
-            for (int i = 0; i < _shadowDepthTextureWidth; i++) {
-                for (int j = 0; j < _shadowDepthTextureHeight; j++, k++) {
-                    unsigned int val = (buffer[k] / std::numeric_limits<GLuint>::max()) * 255;
-                    ppmFile << val << " " << val << " " << val << " ";
-                }
-                ppmFile << std::endl;
-            }
-
-            ppmFile.close();
-        }        
-
-        delete[] buffer;*/
-
         GLubyte * buffer = new GLubyte[size];
 
         glReadPixels(
@@ -661,7 +555,8 @@ namespace openspace {
         if (ppmFile.is_open()) {
 
             ppmFile << "P3" << std::endl;
-            ppmFile << _shadowDepthTextureWidth << " " << _shadowDepthTextureHeight << std::endl;
+            ppmFile << _shadowDepthTextureWidth << " " << _shadowDepthTextureHeight 
+                    << std::endl;
             ppmFile << "255" << std::endl;
 
             std::cout << "\n\nTexture saved to file depthBufferShadowMapping.ppm\n\n";
@@ -699,16 +594,14 @@ namespace openspace {
         if (ppmFile.is_open()) {
 
             ppmFile << "P3" << std::endl;
-            ppmFile << _shadowDepthTextureWidth << " " << _shadowDepthTextureHeight << std::endl;
+            ppmFile << _shadowDepthTextureWidth << " " << _shadowDepthTextureHeight 
+                    << std::endl;
             ppmFile << "255" << std::endl;
 
             std::cout << "\n\nTexture saved to file positionBufferShadowMapping.ppm\n\n";
             int k = 0;
             for (int i = 0; i < _shadowDepthTextureWidth; i++) {
                 for (int j = 0; j < _shadowDepthTextureHeight; j++) {
-                    /*ppmFile << (buffer[k] / std::numeric_limits<GLuint>::max()) * 255 << " " 
-                        << (buffer[k+1] / std::numeric_limits<GLuint>::max()) * 255 << " " 
-                        << (buffer[k+2] / std::numeric_limits<GLuint>::max()) * 255 << " ";*/
                     ppmFile << static_cast<unsigned int>(bBuffer[k]) << " "
                         << static_cast<unsigned int>(bBuffer[k + 1]) << " "
                         << static_cast<unsigned int>(bBuffer[k + 2]) << " ";

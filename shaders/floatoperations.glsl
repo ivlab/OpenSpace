@@ -34,7 +34,8 @@
  */
 float normalizeFloat(float inpt) {
     if (inpt > 1.0) {
-        return float(double(inpt) / double(1E30));
+        //return float(double(inpt) / double(1E30));
+        return inpt / 1.0E30;
     } else {
         return inpt - 1.0;
     }

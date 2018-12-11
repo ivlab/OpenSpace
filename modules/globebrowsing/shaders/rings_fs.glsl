@@ -111,7 +111,7 @@ Fragment getFragment() {
 
     Fragment frag;
     //frag.color = depthInTexture;
-    frag.color      = (0.55 * diffuse * shadow) + diffuse * 0.45;
+    frag.color      = (0.55 * diffuse * shadow) + diffuse * 0.45;    
     //frag.depth      = vs_position.w;
     frag.depth      = vs_screenSpaceDepth;
     if (diffuse.a < 1.0)

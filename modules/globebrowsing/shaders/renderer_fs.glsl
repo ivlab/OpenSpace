@@ -271,7 +271,9 @@ Fragment getFragment() {
     }
 #endif // SHOW_CHUNK_EDGES
 
-    _renderedPosition_ = vec4(vec3(length(positionCameraSpace)/10.0), 1.0);//vec4(positionCameraSpace, 1.0);
+    // DEBUG RENDERING TARGET FOR SHADOW MAPPING
+    // positionCameraSpace is the fragment position in View Space (including SGCT View Coords)
+    _renderedPosition_ = vec4(vec3(length(positionCameraSpace)), 1.0);//vec4(positionCameraSpace, 1.0);
     //_renderedPosition_ = vec4(vec3(fs_position.w)/10.0, 1.0);
 
     return frag;

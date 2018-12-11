@@ -278,7 +278,7 @@ namespace openspace {
         glm::dvec3 cameraZ = lightDirection;
         
         // camera X
-        glm::dvec3 upVector = data.camera.lookUpVectorWorldSpace();
+        glm::dvec3 upVector = glm::dvec3(0.0, -1.0, 0.0);
         glm::dvec3 cameraX = glm::normalize(glm::cross(upVector, cameraZ)); 
         
         // camera Y
@@ -359,11 +359,11 @@ namespace openspace {
         /*glEnable(GL_CULL_FACE);
         checkGLError("begin() -- enabled cull face");
         glCullFace(GL_FRONT);
-        checkGLError("begin() -- set cullface to front");
+        checkGLError("begin() -- set cullface to front");*/
         glEnable(GL_POLYGON_OFFSET_FILL);
         checkGLError("begin() -- enabled polygon offset fill");
         glPolygonOffset(2.5f, 10.0f);
-        checkGLError("begin() -- set values for polygon offset");*/
+        checkGLError("begin() -- set values for polygon offset");
 
         checkGLError("begin() finished");
         
@@ -559,7 +559,7 @@ namespace openspace {
                     << std::endl;
             ppmFile << "255" << std::endl;
 
-            std::cout << "\n\nTexture saved to file depthBufferShadowMapping.ppm\n\n";
+            std::cout << "\n\nSaving depth texture to file depthBufferShadowMapping.ppm\n\n";
             int k = 0;
             for (int i = 0; i < _shadowDepthTextureWidth; i++) {
                 for (int j = 0; j < _shadowDepthTextureHeight; j++, k++) {
@@ -570,11 +570,13 @@ namespace openspace {
             }
 
             ppmFile.close();
+
+            std::cout << "Texture saved to file depthBufferShadowMapping.ppm\n\n";
         }
 
         delete[] buffer;
 
-        GLubyte * bBuffer = new GLubyte[size * 3];
+        GLfloat * bBuffer = new GLfloat[size * 3];
 
         glReadBuffer(GL_COLOR_ATTACHMENT3);
         glReadPixels(
@@ -583,7 +585,7 @@ namespace openspace {
             _shadowDepthTextureWidth,
             _shadowDepthTextureHeight,
             GL_RGB,
-            GL_UNSIGNED_BYTE,
+            GL_FLOAT,
             bBuffer
         );
 
@@ -598,19 +600,33 @@ namespace openspace {
                     << std::endl;
             ppmFile << "255" << std::endl;
 
-            std::cout << "\n\nTexture saved to file positionBufferShadowMapping.ppm\n\n";
+            std::cout << "\n\nSaving texture position to positionBufferShadowMapping.ppm\n\n";
+
+            float biggestValue = 0.f;
+
+            for (int i = 0; i < _shadowDepthTextureWidth; i++) {
+                for (int j = 0; j < _shadowDepthTextureHeight; j++) {
+                    biggestValue = bBuffer[i*_shadowDepthTextureHeight + j] > biggestValue ?
+                        bBuffer[i*_shadowDepthTextureHeight + j] : biggestValue;
+                }
+            }
+
+            biggestValue /= 255.f;
+
             int k = 0;
             for (int i = 0; i < _shadowDepthTextureWidth; i++) {
                 for (int j = 0; j < _shadowDepthTextureHeight; j++) {
-                    ppmFile << static_cast<unsigned int>(bBuffer[k]) << " "
-                        << static_cast<unsigned int>(bBuffer[k + 1]) << " "
-                        << static_cast<unsigned int>(bBuffer[k + 2]) << " ";
+                    ppmFile << static_cast<unsigned int>(bBuffer[k] / biggestValue) << " "
+                        << static_cast<unsigned int>(bBuffer[k + 1] / biggestValue) << " "
+                        << static_cast<unsigned int>(bBuffer[k + 2] / biggestValue) << " ";
                     k += 3;
                 }
                 ppmFile << std::endl;
             }
 
             ppmFile.close();
+
+            std::cout << "Texture saved to file positionBufferShadowMapping.ppm\n\n";
         }
 
         delete[] bBuffer;

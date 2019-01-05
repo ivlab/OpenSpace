@@ -108,7 +108,8 @@ void main() {
     // Write output
     fs_uv = in_uv;
     fs_position = z_normalization(positionClippingSpace);
-    gl_Position = fs_position;
+    //gl_Position = fs_position;
+    gl_Position = positionClippingSpace;
     ellipsoidNormalCameraSpace = patchNormalCameraSpace;
     fs_normal = patchNormalModelSpace;
     positionCameraSpace = p;

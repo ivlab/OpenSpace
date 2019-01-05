@@ -79,6 +79,18 @@ namespace {
         "considered as the new light source distance."
     };
 
+    constexpr openspace::properties::Property::PropertyInfo PolygonOffsetFactorInfo = {
+        "PolygonOffsetFactor",
+        "Polygon Offset Factor",
+        "Polygon Offset Factor"
+    };
+
+    constexpr openspace::properties::Property::PropertyInfo PolygonOffsetUnitsInfo = {
+        "PolygonOffsetUnits",
+        "Polygon Offset Units",
+        "Polygon Offset Units"
+    };
+
     void checkFrameBufferState(const std::string& codePosition)
     {
         if (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
@@ -157,6 +169,18 @@ namespace openspace {
                     new DoubleVerifier,
                     Optional::Yes,
                     DistanceFractionInfo.description
+                },
+                {
+                    PolygonOffsetFactorInfo.identifier,
+                    new DoubleVerifier,
+                    Optional::Yes,
+                    PolygonOffsetFactorInfo.description
+                },
+                {
+                    PolygonOffsetUnitsInfo.identifier,
+                    new DoubleVerifier,
+                    Optional::Yes,
+                    PolygonOffsetUnitsInfo.description
                 }
             }
         };
@@ -167,6 +191,13 @@ namespace openspace {
         , _saveDepthTexture(SaveDepthTextureInfo)
         , _distanceFraction(DistanceFractionInfo, 30, 1, 100000)
         , _enabled({ "Enabled", "Enabled", "Enable/Disable Shadows" }, true)
+        , _enablePolygonOffset({ "Polygon Offset", "Polygon Offset", "Enable/Disable Polygon Offset" }, true)
+        , _enableFaceCulling({ "Face Culling", "Face Culling", "Enable/Disable Face Culling" }, false)
+        , _enableFrontFaceCull({ "Front Face Culling", "Front Face Culling", "Enable/Disable Front Face Culling" }, false)
+        , _enableBackFaceCull({ "Back Face Culling", "Back Face Culling", "Enable/Disable Back Face Culling" }, true)
+        , _polyOffFactor(PolygonOffsetFactorInfo, 2.5f, 0.f, 100000000000.f)
+        , _polyOffUnits(PolygonOffsetUnitsInfo, 10.f, 0.f, 100000000000.f)
+        , _shadowAcneEpsilon({ "Acne", "Acne", "Acne" }, glm::vec3(10), glm::vec3(-1E10), glm::vec3(1E10))
         , _shadowMapDictionary(dictionary)
         , _shadowDepthTextureHeight(1024)
         , _shadowDepthTextureWidth(1024)
@@ -202,13 +233,51 @@ namespace openspace {
                 );
         }
 
+        if (_shadowMapDictionary.hasKey(PolygonOffsetFactorInfo.identifier)) {
+            _polyOffFactor =
+                _shadowMapDictionary.value<float>(PolygonOffsetFactorInfo.identifier);
+        }
+
+        if (_shadowMapDictionary.hasKey(PolygonOffsetUnitsInfo.identifier)) {
+            _polyOffUnits =
+                _shadowMapDictionary.value<float>(PolygonOffsetUnitsInfo.identifier);
+        }
+
         _saveDepthTexture.onChange([&]() {
             _executeDepthTextureSave = true;
+        });
+
+        _enableFrontFaceCull.onChange([&]() {
+            if (_enableFrontFaceCull) {
+                _enableBackFaceCull = false;
+            }
+            else {
+                _enableBackFaceCull = true;
+            }
+        });
+
+        _enableBackFaceCull.onChange([&]() {
+            if (_enableBackFaceCull) {
+                _enableFrontFaceCull = false;
+            }
+            else {
+                _enableFrontFaceCull = true;
+            }
         });
 
         addProperty(_enabled);
         addProperty(_saveDepthTexture);
         addProperty(_distanceFraction);
+
+        addProperty(_enablePolygonOffset);
+        addProperty(_polyOffFactor);
+        addProperty(_polyOffUnits);
+
+        addProperty(_enableFaceCulling);
+        addProperty(_enableFrontFaceCull);
+        addProperty(_enableBackFaceCull);
+
+        addProperty(_shadowAcneEpsilon);
     }
 
     void ShadowComponent::initialize()
@@ -330,16 +399,24 @@ namespace openspace {
 
         // temp
         _shadowData.worldToLightSpaceMatrix = camera->combinedViewMatrix();
+        _shadowData.shadowAcneEpsilon = _shadowAcneEpsilon;
 
         checkGLError("begin() -- Saving Current GL State");
         // Saves current state
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &_defaultFBO);
         glGetIntegerv(GL_VIEWPORT, _mViewport);
+        
         _faceCulling = glIsEnabled(GL_CULL_FACE);
-        glGetIntegerv(GL_CULL_FACE_MODE, &_faceToCull);
+        if (_faceCulling) {
+            glGetIntegerv(GL_CULL_FACE_MODE, &_faceToCull);
+        }
+
         _polygonOffSet = glIsEnabled(GL_POLYGON_OFFSET_FILL);
-        glGetFloatv(GL_POLYGON_OFFSET_FACTOR, &_polygonOffSetFactor);
-        glGetFloatv(GL_POLYGON_OFFSET_UNITS, &_polygonOffSetUnits);
+        if (_polygonOffSet) {
+            glGetFloatv(GL_POLYGON_OFFSET_FACTOR, &_polygonOffSetFactor);
+            glGetFloatv(GL_POLYGON_OFFSET_UNITS, &_polygonOffSetUnits);
+        }
+        
         glGetFloatv(GL_COLOR_CLEAR_VALUE, _colorClearValue);
         glGetFloatv(GL_DEPTH_CLEAR_VALUE, &_depthClearValue);
         _depthIsEnabled = glIsEnabled(GL_DEPTH_TEST);
@@ -356,14 +433,30 @@ namespace openspace {
         checkGLError("begin() -- after cleanning Depth buffer");
         
         
-        /*glEnable(GL_CULL_FACE);
-        checkGLError("begin() -- enabled cull face");
-        glCullFace(GL_FRONT);
-        checkGLError("begin() -- set cullface to front");*/
-        glEnable(GL_POLYGON_OFFSET_FILL);
-        checkGLError("begin() -- enabled polygon offset fill");
-        glPolygonOffset(2.5f, 10.0f);
-        checkGLError("begin() -- set values for polygon offset");
+        if (_enableFaceCulling)
+        {
+            glEnable(GL_CULL_FACE);
+            checkGLError("begin() -- enabled cull face");
+
+            if (_enableFrontFaceCull) {
+                glCullFace(GL_FRONT);
+            }
+            else {
+                glCullFace(GL_BACK);
+            }
+            
+        }
+        else {
+            glDisable(GL_CULL_FACE);
+        }
+        
+        if (_enablePolygonOffset) {
+            glEnable(GL_POLYGON_OFFSET_FILL);
+            checkGLError("enableShadowOptions() -- enabled polygon offset fill");
+            glPolygonOffset(_polyOffFactor, _polyOffUnits);
+            checkGLError("enableShadowOptions() -- set values for polygon offset");
+            std::cout << "--- PolyOff Factor: " << _polyOffFactor << ", PolyOff Units: " << _polyOffUnits << " ---" << std::endl;
+        }
 
         checkGLError("begin() finished");
         
@@ -383,6 +476,9 @@ namespace openspace {
         camera->setFocusPositionVec3(_cameraFocus);
         camera->setRotation(_cameraRotation);
         
+        // Updating camera's matrices
+        camera->combinedViewMatrix();
+
         // Restores system state
         glBindFramebuffer(GL_FRAMEBUFFER, _defaultFBO);
         checkGLError("end() -- Rebinding default FBO");
@@ -425,6 +521,26 @@ namespace openspace {
         glClearDepth(_depthClearValue);
 
         checkGLError("end() finished");
+    }
+
+    void ShadowComponent::enableShadowOptions() {
+        if (_enablePolygonOffset) {
+            glEnable(GL_POLYGON_OFFSET_FILL);
+            checkGLError("enableShadowOptions() -- enabled polygon offset fill");
+            glPolygonOffset(_polyOffFactor, _polyOffUnits);
+            checkGLError("enableShadowOptions() -- set values for polygon offset");
+            std::cout << "--- PolyOff Factor: " << _polyOffFactor << ", PolyOff Units: " << _polyOffUnits << " ---" << std::endl;
+        }
+    }
+
+    void ShadowComponent::disableShadowOptions() {
+        if (_polygonOffSet) {
+            glEnable(GL_POLYGON_OFFSET_FILL);
+            glPolygonOffset(_polygonOffSetFactor, _polygonOffSetUnits);
+        }
+        else {
+            glDisable(GL_POLYGON_OFFSET_FILL);
+        }
     }
 
     void ShadowComponent::update(const UpdateData& /*data*/) {
@@ -576,7 +692,7 @@ namespace openspace {
 
         delete[] buffer;
 
-        GLfloat * bBuffer = new GLfloat[size * 3];
+        GLfloat * bBuffer = new GLfloat[size * 4];
 
         glReadBuffer(GL_COLOR_ATTACHMENT3);
         glReadPixels(
@@ -584,7 +700,7 @@ namespace openspace {
             0,
             _shadowDepthTextureWidth,
             _shadowDepthTextureHeight,
-            GL_RGB,
+            GL_RGBA,
             GL_FLOAT,
             bBuffer
         );
@@ -596,30 +712,32 @@ namespace openspace {
         if (ppmFile.is_open()) {
 
             ppmFile << "P3" << std::endl;
-            ppmFile << _shadowDepthTextureWidth << " " << _shadowDepthTextureHeight 
-                    << std::endl;
+            ppmFile << _shadowDepthTextureWidth << " " << _shadowDepthTextureHeight
+                << std::endl;
             ppmFile << "255" << std::endl;
 
             std::cout << "\n\nSaving texture position to positionBufferShadowMapping.ppm\n\n";
 
             float biggestValue = 0.f;
 
+            int k = 0;
             for (int i = 0; i < _shadowDepthTextureWidth; i++) {
                 for (int j = 0; j < _shadowDepthTextureHeight; j++) {
-                    biggestValue = bBuffer[i*_shadowDepthTextureHeight + j] > biggestValue ?
-                        bBuffer[i*_shadowDepthTextureHeight + j] : biggestValue;
+                    biggestValue = bBuffer[k] > biggestValue ?
+                        bBuffer[k] : biggestValue;
+                    k += 4;
                 }
             }
 
             biggestValue /= 255.f;
 
-            int k = 0;
+            k = 0;
             for (int i = 0; i < _shadowDepthTextureWidth; i++) {
                 for (int j = 0; j < _shadowDepthTextureHeight; j++) {
                     ppmFile << static_cast<unsigned int>(bBuffer[k] / biggestValue) << " "
                         << static_cast<unsigned int>(bBuffer[k + 1] / biggestValue) << " "
                         << static_cast<unsigned int>(bBuffer[k + 2] / biggestValue) << " ";
-                    k += 3;
+                    k += 4;
                 }
                 ppmFile << std::endl;
             }

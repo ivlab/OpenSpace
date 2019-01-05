@@ -34,6 +34,7 @@
 #include <openspace/properties/vector/vec4property.h>
 #include <openspace/properties/stringproperty.h>
 #include <openspace/properties/triggerproperty.h>
+#include <openspace/properties/vector/vec3property.h>
 
 #include <ghoul/glm.h>
 #include <ghoul/opengl/texture.h>
@@ -68,6 +69,7 @@ namespace openspace {
             glm::dmat4 worldToLightSpaceMatrix;
             GLuint shadowDepthTexture;
             GLuint positionInLightSpaceTexture;
+            glm::vec3 shadowAcneEpsilon;
         };
     public:
         ShadowComponent(const ghoul::Dictionary& dictionary);
@@ -81,6 +83,8 @@ namespace openspace {
 
         void begin(const RenderData& data);
         void end(const RenderData& data);
+        void enableShadowOptions();
+        void disableShadowOptions();
         void update(const UpdateData& data);
 
         static documentation::Documentation Documentation();
@@ -113,6 +117,14 @@ namespace openspace {
         properties::TriggerProperty _saveDepthTexture;
         properties::IntProperty _distanceFraction;
         properties::BoolProperty _enabled;
+        properties::BoolProperty _enablePolygonOffset;
+        properties::BoolProperty _enableFaceCulling;
+        properties::BoolProperty _enableFrontFaceCull;
+        properties::BoolProperty _enableBackFaceCull;
+        properties::FloatProperty _polyOffFactor;
+        properties::FloatProperty _polyOffUnits;
+        // tmp
+        properties::Vec3Property _shadowAcneEpsilon;
         
         ghoul::Dictionary _shadowMapDictionary;
         

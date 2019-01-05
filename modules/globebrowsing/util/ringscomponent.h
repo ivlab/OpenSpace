@@ -73,12 +73,12 @@ namespace openspace {
         bool isReady() const;
 
 
-        void draw(const RenderData& data, const RingsComponent::RenderPass renderPass);
         void draw(
             const RenderData& data, 
             const RingsComponent::RenderPass renderPass, 
-            const ShadowComponent::ShadowMapData& shadowData
+            const ShadowComponent::ShadowMapData& shadowData = {}
         );
+        
         void update(const UpdateData& data);
 
         static documentation::Documentation Documentation();

@@ -124,7 +124,8 @@ void main() {
     // Write output
     fs_uv = in_uv;
     fs_position = z_normalization(positionClippingSpace);
-    gl_Position = fs_position;
+    //gl_Position = fs_position;
+    gl_Position = positionClippingSpace;
     ellipsoidNormalCameraSpace = mat3(modelViewTransform) * pair.normal;
     fs_normal = pair.normal;
     positionCameraSpace = vec3(modelViewTransform * vec4(pair.position, 1.0));

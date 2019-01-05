@@ -255,24 +255,26 @@ namespace openspace {
         _geometryOnlyShader = nullptr;
     }
 
-    void RingsComponent::draw(const RenderData& data, const RingsComponent::RenderPass renderPass) {
+    void RingsComponent::draw(
+        const RenderData& data,
+        const RingsComponent::RenderPass renderPass,
+        const ShadowComponent::ShadowMapData& shadowData
+    ) {
         if (renderPass == GeometryAndShading) {
             _shader->activate();
         }
         else if (renderPass == GeometryOnly) {
             _geometryOnlyShader->activate();
         }
-        
+
         const glm::dmat4 modelTransform =
             glm::translate(glm::dmat4(1.0), data.modelTransform.translation) *
             glm::dmat4(data.modelTransform.rotation) *
             glm::scale(glm::dmat4(1.0), glm::dvec3(data.modelTransform.scale));
 
         const glm::dmat4 modelViewTransform = data.camera.combinedViewMatrix() * modelTransform;
-
         const glm::dmat4 projectionMatrix = glm::dmat4(data.camera.projectionMatrix());
 
-        ghoul::opengl::TextureUnit unit;
         if (renderPass == GeometryAndShading) {
             _shader->setUniform(_uniformCache.modelViewMatrix, modelViewTransform);
             _shader->setUniform(_uniformCache.projectionMatrix, projectionMatrix);
@@ -282,9 +284,28 @@ namespace openspace {
             _shader->setUniform(_uniformCache.nightFactor, _nightFactor);
             _shader->setUniform(_uniformCache.sunPosition, _sunPosition);
 
+            // Adding the model transformation to the final shadow matrix so we have a 
+            // complete transformation from the model coordinates to the clip space of 
+            // the light position.
+            _shader->setUniform("shadowMatrix", shadowData.shadowMatrix * modelTransform);
+
+            ghoul::opengl::TextureUnit unit;
             unit.activate();
             _texture->bind();
             _shader->setUniform(_uniformCache.texture, unit);
+
+            ghoul::opengl::TextureUnit shadowMapUnit;
+            shadowMapUnit.activate();
+            glBindTexture(GL_TEXTURE_2D, shadowData.shadowDepthTexture);
+
+            _shader->setUniform("shadowMap", shadowMapUnit);
+
+            //// DEBUGGING
+            //ghoul::opengl::TextureUnit shadowTextureUnit;
+            //shadowTextureUnit.activate();
+            //glBindTexture(GL_TEXTURE_2D, shadowData.positionInLightSpaceTexture);
+            //_shader->setUniform("shadowPositionTexture", shadowTextureUnit);
+            //_shader->setUniform("objectToLightSpaceMatrix", shadowData.worldToLightSpaceMatrix * modelTransform);
         }
         else if (renderPass == GeometryOnly) {
             _geometryOnlyShader->setUniform(
@@ -300,14 +321,18 @@ namespace openspace {
                 _offset
             );
         }
-        
-        glDisable(GL_CULL_FACE);
 
+        GLboolean fc = glIsEnabled(GL_CULL_FACE);
+        if (fc) {
+            glDisable(GL_CULL_FACE);
+        }
+        
         glBindVertexArray(_quad);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
-        glEnable(GL_CULL_FACE);
-       
+        if (fc) {
+            glEnable(GL_CULL_FACE);
+        }
 
         if (renderPass == GeometryAndShading) {
             _shader->deactivate();
@@ -315,64 +340,6 @@ namespace openspace {
         else if (renderPass == GeometryOnly) {
             _geometryOnlyShader->deactivate();
         }
-    }
-
-    void RingsComponent::draw(
-        const RenderData& data,
-        const RingsComponent::RenderPass renderPass,
-        const ShadowComponent::ShadowMapData& shadowData
-    ) {
-        _shader->activate();
-        
-        const glm::dmat4 modelTransform =
-            glm::translate(glm::dmat4(1.0), data.modelTransform.translation) *
-            glm::dmat4(data.modelTransform.rotation) *
-            glm::scale(glm::dmat4(1.0), glm::dvec3(data.modelTransform.scale));
-
-        const glm::dmat4 modelViewTransform = data.camera.combinedViewMatrix() * modelTransform;
-        const glm::dmat4 projectionMatrix = glm::dmat4(data.camera.projectionMatrix());
-
-        _shader->setUniform(_uniformCache.modelViewMatrix, modelViewTransform);
-        _shader->setUniform(_uniformCache.projectionMatrix, projectionMatrix);
-        _shader->setUniform(_uniformCache.textureOffset, _offset);
-        _shader->setUniform(_uniformCache.transparency, _transparency);
-
-        _shader->setUniform(_uniformCache.nightFactor, _nightFactor);
-        _shader->setUniform(_uniformCache.sunPosition, _sunPosition);
-        
-        // Adding the model transformation to the final shadow matrix so we have a 
-        // complete transformation from the model coordinates to the clip space of 
-        // the light position.
-        _shader->setUniform("shadowMatrix", shadowData.shadowMatrix * modelTransform);
-
-        ghoul::opengl::TextureUnit unit;
-        unit.activate();
-        _texture->bind();
-        _shader->setUniform(_uniformCache.texture, unit);
-        
-        ghoul::opengl::TextureUnit shadowMapUnit;
-        shadowMapUnit.activate();
-        glBindTexture(GL_TEXTURE_2D, shadowData.shadowDepthTexture);
-        
-        _shader->setUniform("shadowMap", shadowMapUnit);
-
-
-        //// DEBUGGING
-        //ghoul::opengl::TextureUnit shadowTextureUnit;
-        //shadowTextureUnit.activate();
-        //glBindTexture(GL_TEXTURE_2D, shadowData.positionInLightSpaceTexture);
-        //_shader->setUniform("shadowPositionTexture", shadowTextureUnit);
-        //_shader->setUniform("objectToLightSpaceMatrix", shadowData.worldToLightSpaceMatrix * modelTransform);
-
-        glDisable(GL_CULL_FACE);
-
-        glBindVertexArray(_quad);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-
-        glEnable(GL_CULL_FACE);
-
-
-        _shader->deactivate();
     }
 
     void RingsComponent::update(const UpdateData& data) {

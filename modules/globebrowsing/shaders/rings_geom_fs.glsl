@@ -41,17 +41,17 @@ Fragment getFragment() {
     float radius = length(st);
 
     // We only want to consider ring-like objects so we need to discard everything else
-    if (radius > 1.0)
-        discard;
+    //if (radius > 1.0)
+    //    discard;
 
     // Remapping the texture coordinates
     // Radius \in [0,1],  texCoord \in [textureOffset.x, textureOffset.y]
     // textureOffset.x -> 0
     // textureOffset.y -> 1
     float texCoord = (radius - textureOffset.x) / (textureOffset.y - textureOffset.x);
-    if (texCoord < 0.f || texCoord > 1.f) {
-        discard;
-    }
+    //if (texCoord < 0.f || texCoord > 1.f) {
+    //    discard;
+    //}
         
     // The normal for the one plane depends on whether we are dealing
     // with a front facing or back facing fragment

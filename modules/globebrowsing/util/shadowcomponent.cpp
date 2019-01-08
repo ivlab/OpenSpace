@@ -388,7 +388,8 @@ namespace openspace {
         //============= Light Matrix by Camera Matrices Composition =============
         //=======================================================================
         glm::dmat4 lightProjectionMatrix = glm::dmat4(camera->projectionMatrix());
-        //glm::dmat4 lightProjectionMatrix = glm::ortho(-1000.0, 1000.0, -1000.0, 1000.0, 0.0010, 1000.0);
+        //glm::dmat4 lightProjectionMatrix = glm::ortho(0.0f, static_cast<float>(_shadowDepthTextureWidth), 0.f,
+        //    static_cast<float>(_shadowDepthTextureHeight), 0.1f, 100.0f);
         
         // The model transformation missing in the final shadow matrix is add when rendering each
         // object (using its transformations provided by the RenderData structure)
@@ -580,6 +581,7 @@ namespace openspace {
         //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
         checkGLError("createdDepthTexture");
 
         glGenTextures(1, &_positionInLightSpaceTexture);

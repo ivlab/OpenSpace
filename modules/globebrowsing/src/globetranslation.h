@@ -22,56 +22,42 @@
  * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                                         *
  ****************************************************************************************/
 
-#include <modules/server/include/topics/authorizationtopic.h>
+#ifndef __OPENSPACE_MODULE_GLOBEBROWSING___GLOBETRANSLATION___H__
+#define __OPENSPACE_MODULE_GLOBEBROWSING___GLOBETRANSLATION___H__
 
-#include <modules/server/include/connection.h>
-#include <openspace/engine/configuration.h>
-#include <openspace/engine/globals.h>
-#include <ghoul/logging/logmanager.h>
+#include <openspace/scene/translation.h>
 
-namespace {
-    constexpr const char* _loggerCat = "AuthorizationTopic";
+#include <openspace/properties/stringproperty.h>
+#include <openspace/properties/scalar/boolproperty.h>
+#include <openspace/properties/scalar/doubleproperty.h>
 
-    constexpr const char* KeyStatus = "status";
-    constexpr const char* Authorized = "authorized";
-    constexpr const char* IncorrectKey = "incorrectKey";
-    constexpr const char* BadRequest = "badRequest";
-} // namespace
+namespace openspace::globebrowsing {
 
-namespace openspace {
+class RenderableGlobe;
 
-AuthorizationTopic::AuthorizationTopic(std::string password) 
-    : _password(std::move(password))
-{}
+class GlobeTranslation : public Translation {
+public:
+    GlobeTranslation(const ghoul::Dictionary& dictionary);
 
-bool AuthorizationTopic::isDone() const {
-    return _isAuthenticated;
-}
+    glm::dvec3 position(const UpdateData& data) const override;
 
-void AuthorizationTopic::handleJson(const nlohmann::json& json) {
-    if (isDone()) {
-        _connection->sendJson(wrappedPayload({ KeyStatus, Authorized }));
-    } else {
-        try {
-            auto providedKey = json.at("key").get<std::string>();
-            if (authorize(providedKey)) {
-                _connection->setAuthorized(true);
-                _connection->sendJson(wrappedPayload({ KeyStatus, Authorized }));
-                LINFO("Client successfully authorized.");
-            } else {
-                _connection->sendJson(wrappedPayload({ KeyStatus, IncorrectKey }));
-            }
-        } catch (const std::out_of_range&) {
-            _connection->sendJson(wrappedPayload({ KeyStatus, BadRequest }));
-        } catch (const std::domain_error&) {
-            _connection->sendJson(wrappedPayload({ KeyStatus, BadRequest }));
-        }
-    }
-}
+    static documentation::Documentation Documentation();
 
-bool AuthorizationTopic::authorize(const std::string& key) {
-    _isAuthenticated = (key == _password);
-    return _isAuthenticated;
-}
+private:
+    void fillAttachedNode();
 
-} // namespace openspace
+    properties::StringProperty _globe;
+    properties::DoubleProperty _longitude;
+    properties::DoubleProperty _latitude;
+    properties::DoubleProperty _fixedAltitude;
+    properties::BoolProperty _useFixedAltitude;
+
+    RenderableGlobe* _attachedNode = nullptr;
+
+    mutable bool _positionIsDirty = true;
+    mutable glm::dvec3 _position;
+};
+
+} // namespace openspace::globebrowsing
+
+#endif // __OPENSPACE_MODULE_GLOBEBROWSING___GLOBETRANSLATION___H__

@@ -25,6 +25,7 @@
 #version __CONTEXT__
 
 #include "PowerScaling/powerScaling_vs.hglsl"
+#include "floatoperations.glsl"
 
 layout(location = 0) in vec2 in_position;
 layout(location = 1) in vec2 in_st;
@@ -51,6 +52,8 @@ void main() {
     vec4 positionClipSpaceZNorm = z_normalization(positionClipSpace);
     
     shadowCoords = vec4(shadowMatrix * dvec4(in_position, 0.0, 1.0));
+    shadowCoords.w = normalizeFloat(shadowCoords.w);    
+    
     // temp
     //fragPosInLightSpace = vec4(objectToLightSpaceMatrix * dvec4(in_position.xy, 0.0, 1.0));
 

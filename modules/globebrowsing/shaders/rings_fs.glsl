@@ -23,6 +23,7 @@
  ****************************************************************************************/
 
 #include "PowerScaling/powerScaling_fs.hglsl"
+#include "floatoperations.glsl"
 #include "fragment.glsl"
 
 in vec2 vs_st;
@@ -59,9 +60,9 @@ Fragment getFragment() {
     // textureOffset.x -> 0
     // textureOffset.y -> 1
     float texCoord = (radius - textureOffset.x) / (textureOffset.y - textureOffset.x);
-    // if (texCoord < 0.f || texCoord > 1.f) {
-    //     discard;
-    // }
+    if (texCoord < 0.f || texCoord > 1.f) {
+        discard;
+    }
         
     vec4 diffuse = texture(texture1, texCoord);
     float colorValue = length(diffuse.rgb);
@@ -74,6 +75,9 @@ Fragment getFragment() {
     // shadow == 1.0 means it is not in shadow
     float shadow = 1.0;
     if ( shadowCoords.z >= 0 ) {
+        //vec4 normalizedShadowCoords = shadowCoords;
+        //normalizedShadowCoords.z = normalizeFloat(vs_screenSpaceDepth);
+        //shadow = textureProj(shadowMap, normalizedShadowCoords);
         shadow = textureProj(shadowMap, shadowCoords);
     }
 
@@ -111,8 +115,8 @@ Fragment getFragment() {
 
     Fragment frag;
     //frag.color = depthInTexture;
-    //frag.color      = (0.55 * diffuse * shadow) + diffuse * 0.45;
-    frag.color      = vec4(vec3(shadow), 1.0);
+    frag.color      = (0.55 * diffuse * shadow) + diffuse * 0.45;
+    //frag.color      = vec4(vec3(shadow), 1.0);
     
     //frag.depth      = vs_position.w;
     frag.depth      = vs_screenSpaceDepth;

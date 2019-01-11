@@ -632,23 +632,23 @@ void RenderableGlobe::render(const RenderData& data, RendererTasks& rendererTask
                         GLboolean dt = glIsEnabled(GL_DEPTH_TEST);
                         GLenum faceToCull;
                         glGetIntegerv(GL_CULL_FACE_MODE, &faceToCull);
-                        std::cout << "== Before Rendering: dt = " << static_cast<bool>(dt) << ", fc = " << static_cast<bool>(fc) << ", faceToCull = " << static_cast<int>(faceToCull) << " ==" << std::endl;
+                        //std::cout << "== Before Rendering: dt = " << static_cast<bool>(dt) << ", fc = " << static_cast<bool>(fc) << ", faceToCull = " << static_cast<int>(faceToCull) << " ==" << std::endl;
                         
                         renderChunks(data, rendererTask, true);
                         
                         fc = glIsEnabled(GL_CULL_FACE);
                         dt = glIsEnabled(GL_DEPTH_TEST);
                         glGetIntegerv(GL_CULL_FACE_MODE, &faceToCull);
-                        std::cout << "** After Globe Rendering: dt = " << static_cast<bool>(dt) << ", fc = " << static_cast<bool>(fc) << ", faceToCull = " << static_cast<int>(faceToCull) << " **" << std::endl;
+                        //std::cout << "** After Globe Rendering: dt = " << static_cast<bool>(dt) << ", fc = " << static_cast<bool>(fc) << ", faceToCull = " << static_cast<int>(faceToCull) << " **" << std::endl;
                         
-                        RenderData tmpRD = data;
-                        tmpRD.modelTransform.translation = tmpRD.modelTransform.translation + glm::dvec3(_shadowComponent.shadowMapData().shadowAcneEpsilon);
-                        _ringsComponent.draw(tmpRD, RingsComponent::GeometryOnly);
-                        //_ringsComponent.draw(data, RingsComponent::GeometryOnly);              
+                        //RenderData tmpRD = data;
+                        //tmpRD.modelTransform.translation = tmpRD.modelTransform.translation + glm::dvec3(_shadowComponent.shadowMapData().shadowAcneEpsilon);
+                        //_ringsComponent.draw(tmpRD, RingsComponent::GeometryOnly);
+                        _ringsComponent.draw(data, RingsComponent::GeometryOnly);              
                         fc = glIsEnabled(GL_CULL_FACE);
                         dt = glIsEnabled(GL_DEPTH_TEST);
                         glGetIntegerv(GL_CULL_FACE_MODE, &faceToCull);
-                        std::cout << "++ After Rings Rendering: dt = " << static_cast<bool>(dt) << ", fc = " << static_cast<bool>(fc) << ", faceToCull = " << static_cast<int>(faceToCull) << " ++" << std::endl;
+                        //std::cout << "++ After Rings Rendering: dt = " << static_cast<bool>(dt) << ", fc = " << static_cast<bool>(fc) << ", faceToCull = " << static_cast<int>(faceToCull) << " ++" << std::endl;
                     
                     _shadowComponent.end(data);
               

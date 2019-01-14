@@ -456,7 +456,7 @@ namespace openspace {
             checkGLError("enableShadowOptions() -- enabled polygon offset fill");
             glPolygonOffset(_polyOffFactor, _polyOffUnits);
             checkGLError("enableShadowOptions() -- set values for polygon offset");
-            std::cout << "--- PolyOff Factor: " << _polyOffFactor << ", PolyOff Units: " << _polyOffUnits << " ---" << std::endl;
+            //std::cout << "--- PolyOff Factor: " << _polyOffFactor << ", PolyOff Units: " << _polyOffUnits << " ---" << std::endl;
         }
 
         checkGLError("begin() finished");
@@ -530,7 +530,7 @@ namespace openspace {
             checkGLError("enableShadowOptions() -- enabled polygon offset fill");
             glPolygonOffset(_polyOffFactor, _polyOffUnits);
             checkGLError("enableShadowOptions() -- set values for polygon offset");
-            std::cout << "--- PolyOff Factor: " << _polyOffFactor << ", PolyOff Units: " << _polyOffUnits << " ---" << std::endl;
+            //std::cout << "--- PolyOff Factor: " << _polyOffFactor << ", PolyOff Units: " << _polyOffUnits << " ---" << std::endl;
         }
     }
 

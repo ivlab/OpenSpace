@@ -52,7 +52,7 @@ void main() {
     vec4 positionClipSpaceZNorm = z_normalization(positionClipSpace);
     
     shadowCoords = vec4(shadowMatrix * dvec4(in_position, 0.0, 1.0));
-    shadowCoords.w = normalizeFloat(shadowCoords.w);    
+    //shadowCoords.w = normalizeFloat(shadowCoords.w);    
     
     // temp
     //fragPosInLightSpace = vec4(objectToLightSpaceMatrix * dvec4(in_position.xy, 0.0, 1.0));

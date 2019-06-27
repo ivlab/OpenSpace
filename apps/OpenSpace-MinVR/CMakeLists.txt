@@ -56,6 +56,9 @@ target_link_libraries(OpenSpace-MinVR libOpenSpace MinVR)
 # Why not put these in the module's path? Because they do not have access to the
 # target as of July 2017, which is needed.
 if (OPENSPACE_MODULE_WEBBROWSER AND CEF_ROOT)
+  # wanted by CEF
+  set(PROJECT_ARCH "x86_64")
+
   if (WIN32)
     set(RESOURCE_FILE ${OPENSPACE_APPS_DIR}/OpenSpace-MinVR/openspace.rc)
   endif ()
@@ -71,16 +74,13 @@ elseif (OPENSPACE_MODULE_WEBBROWSER)
   message(WARNING "Web configured to be included, but no CEF_ROOT was found, please try configuring CMake again.")
 endif ()
 
-if (OPENSPACE_MODULE_WEBGUI AND WEBGUI_MODULE_PATH)
-  set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${WEBGUI_MODULE_PATH}/cmake")
-  include(webgui_helpers)
-  build_webgui_source(OpenSpace-MinVR)
-elseif(OPENSPACE_MODULE_WEBGUI)
-  message(WARNING "WebGui is configured to be included, but the web source could not be found. Try configuring CMake again.")
-endif()
-# End Web Browser and Web gui
-
 if (MSVC)
+  begin_header("Dependency: Dbghelp")
   # This library is used for being able to output the callstack if an exception escapes
   target_link_libraries(OpenSpace-MinVR Dbghelp.lib)
-endif()
+  end_header()
+endif ()
+
+if (OPENSPACE_NVTOOLS_ENABLED)
+  target_link_libraries(OpenSpace-MinVR "${OPENSPACE_NVTOOLS_PATH}/lib/x64/nvToolsExt64_1.lib")
+endif ()

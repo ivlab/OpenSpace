@@ -31,8 +31,7 @@ set_source_files_properties(
 
 set(MACOSX_BUNDLE_ICON_FILE openspace.icns)
 
-create_new_application(
-  Wormhole MACOSX_BUNDLE
+create_new_application(Wormhole MACOSX_BUNDLE
   ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/openspace.rc
   ${CMAKE_CURRENT_SOURCE_DIR}/openspace.icns

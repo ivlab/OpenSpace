@@ -86,6 +86,8 @@ struct {
 
 bool HasInitializedGL = false;
 std::array<float, 30> LastFrametimes = { 1.f / 60.f }; // we can be optimistic here
+
+// TODO (@dan) -- need a robust way to determine if this is the minvr master node
 constexpr const char* MasterNode = "/MinVR/Desktop1";
 bool IsMasterNode = false;
 uint64_t FrameNumber = 0;
@@ -183,6 +185,8 @@ void Handler::onVREvent(const VRDataIndex& eventData) {
             }
 
             MouseAction action;
+            KeyModifier mods;
+
             if (actionName == "Down") {
                 action = MouseAction::Press;
             }
@@ -200,7 +204,7 @@ void Handler::onVREvent(const VRDataIndex& eventData) {
             if (button == MouseButton::Right && action == MouseAction::Press) {
                 windowingGlobals.mouseButtons |= 1 << 2;
             }
-            global::openSpaceEngine.mouseButtonCallback(button, action);
+            openspace::global::openSpaceEngine.mouseButtonCallback(button, action, mods);
         }
 
     }
@@ -233,7 +237,7 @@ void Handler::onVREvent(const VRDataIndex& eventData) {
         std::vector<char> synchronizationBuffer(nBytes);
         std::copy(data, data + nBytes, synchronizationBuffer.begin());
 
-        global::openSpaceEngine.decode(std::move(synchronizationBuffer));
+        openspace::global::openSpaceEngine.decode(std::move(synchronizationBuffer));
     }
     else {
         LERRORC("onVREvent()", fmt::format("Received an event of unknown type {}", type));
@@ -255,7 +259,7 @@ void Handler::onVRRenderContext(const VRDataIndex& stateData) {
             windowingGlobals.framebufferSize.x = stateData.getValue("FramebufferWidth");
             windowingGlobals.framebufferSize.y = stateData.getValue("FramebufferHeight");
 
-            global::openSpaceEngine.initializeGL();
+            openspace::global::openSpaceEngine.initializeGL();
 
             HasInitializedGL = true;
         }
@@ -323,6 +327,10 @@ void setupMinVrDelegateFunctions(VRMain& main) {
 }
 
 int main(int argc, char** argv) {
+
+
+
+
     // Initialize the LogManager and add the console log as this will be used every time
     // and we need a fall back if something goes wrong between here and when we add the
     // logs from the configuration file. If the user requested as specific loglevel in the
@@ -340,6 +348,16 @@ int main(int argc, char** argv) {
     }
 
     ghoul::initialize();
+
+
+    // Register the path of the executable,
+    // to make it possible to find other files in the same directory.
+    FileSys.registerPathToken(
+        "${BIN}",
+        ghoul::filesystem::File(absPath(argv[0])).directoryName(),
+        ghoul::filesystem::FileSystem::Override::Yes
+    );
+
 
     // Create the OpenSpace engine and get arguments for the SGCT engine
     std::string windowConfiguration;
@@ -400,29 +418,36 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
 
-    global::openSpaceEngine.registerPathTokens();
-    global::openSpaceEngine.initialize();
+    openspace::global::openSpaceEngine.registerPathTokens();
+    LDEBUG("Before openspaceengine::initialize()");
+    openspace::global::openSpaceEngine.initialize();
+    LDEBUG("After openspaceengine::initialize()");
 
+
+    // Create the MinVR engine (VRMain)
     engine.addEventHandler(&handler);
     engine.addRenderHandler(&handler);
-    engine.loadConfig(global::configuration.windowConfiguration);
     // Yes, this still contains the OpenSpace-specific commandline arguments, but no one
     // will ever know if we use the remaining arguments or not; both commandline parsers
     // just ignore the arguments they don't understand
     engine.initialize(argc, argv);
 
+
     setupMinVrDelegateFunctions(engine);
 
-    const std::string& name = engine.getName();
-    IsMasterNode = (name == MasterNode);
+    IsMasterNode = engine.isMasterNode();
+    //IsMasterNode = (name == MasterNode);
 
     if (global::windowDelegate.isMaster()) {
         engine.addInputDevice(&handler);
     }
+    
 
     lastFrameTime = std::chrono::high_resolution_clock::now();
     // run loop-di-loop
     do {
+        //LDEBUG("In loop");
+
         if (HasInitializedGL) {
             auto now = std::chrono::high_resolution_clock::now();
             std::chrono::nanoseconds dt = now - lastFrameTime;
@@ -444,10 +469,10 @@ int main(int argc, char** argv) {
 
 
 
-            global::openSpaceEngine.preSynchronization();
+            openspace::global::openSpaceEngine.preSynchronization();
 
             if (global::windowDelegate.isMaster()) {
-                std::vector<char> syncBuffer = global::openSpaceEngine.encode();
+                std::vector<char> syncBuffer = openspace::global::openSpaceEngine.encode();
                 VRDataIndex e("OpenSpace_Sync");
 
                 e.addData("EventType", "OpenSpaceMessage");
@@ -467,26 +492,31 @@ int main(int argc, char** argv) {
                 e.addData("SynchronizationData", intData);
                 eventQueue.push(e);
             }
+        }
 
-            engine.synchronizeAndProcessEvents();
+        //LDEBUG("Before MinVR::VRMain::synchronizeAndProcessEvents()");
+        engine.synchronizeAndProcessEvents();
+        //LDEBUG("After MinVR::VRMain::synchronizeAndProcessEvents()");
 
-            engine.updateAllModels();
+        engine.updateAllModels();
 
+        if (HasInitializedGL) {
             // @TODO(abock): Not sure if this should be before updateAllModels or here
-            global::openSpaceEngine.postSynchronizationPreDraw();
-
+            openspace::global::openSpaceEngine.postSynchronizationPreDraw();
             ++FrameNumber;
         }
 
+        //LDEBUG("Before MinVR::VRMain::renderOnAllDisplays()");
         engine.renderOnAllDisplays();
+        //LDEBUG("After MinVR::VRMain::renderOnAllDisplays()");
     } while (!engine.getShutdown());
 
-    global::openSpaceEngine.deinitializeGL();
+    openspace::global::openSpaceEngine.deinitializeGL();
 
     // This assumes that `shutdown` destroys the OpenGL state and thus have to happen
     // after the deinitializeGL function
     engine.shutdown();
-    global::openSpaceEngine.deinitialize();
+    openspace::global::openSpaceEngine.deinitialize();
 
     exit(EXIT_SUCCESS);
 }
